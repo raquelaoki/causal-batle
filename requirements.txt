@@ -1,0 +1,14 @@
+scipy
+pandas
+numpy
+matplotlib
+scikit_learn
+seaborn
+statsmodels
+jupyterlmod
+torch
+tensorflow_cpu
+tensorflow_probability
+pyyaml
+tqdm
+keras
