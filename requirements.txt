@@ -7,7 +7,7 @@ seaborn
 statsmodels
 jupyterlmod
 torch
-tensorflow_cpu
+tensorflow
 tensorflow_probability
 pyyaml
 tqdm

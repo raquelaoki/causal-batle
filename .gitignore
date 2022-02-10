@@ -3,7 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 .idea/
+.DS_store
 
+# Baselines repo
+ucate/
+CompBioAndSimulated_Datasets/
 
 # Unit test / coverage reports
 .cache
@@ -11,7 +15,7 @@ __pycache__/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-
+.ipynb
 
 # Environments
 .env

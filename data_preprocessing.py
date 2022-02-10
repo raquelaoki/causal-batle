@@ -21,7 +21,7 @@ class DataTarget():
         self.y = y
 
 
-def make_gwas(params, seed):
+def make_gwas(params={}, seed=0):
     """ Make the gwas dataset.
 
     This function adapts the gwas dataset simulated at
@@ -33,8 +33,12 @@ def make_gwas(params, seed):
         data_s: DataSource class, unlabeled covariates
         data_t: DataTarget class, labeled (with treatment assigment and outcome) covariates
     """
+
+    params.get('sample_size', 10000)
+    params.get('covariates_size', 1000)
+    params.get('n_treatments', 1)
+
     prop = 1 / params['covariates_size']
-    params['n_treatments'] = 1
     data_setting = bcdata.gwas_simulated_data(prop_tc=prop,  # proportion ot true causes
                                               pca_path='CompBioAndSimulated_Datasets/data/tgp_pca2.txt',
                                               seed=seed,
@@ -47,17 +51,3 @@ def make_gwas(params, seed):
     data_t = DataTarget(t_x, t_t, t_y)
     return data_s, data_t
 
-
-def make_dataset(params):
-    """Make the simulated dataset.
-    Args:
-        params: dictionary with parameters
-    Returns:
-        X_train, X_test, y_train, y_test datasets
-    """
-    X, y = make_classification(n_samples=params['n_samples'],
-                               n_features=params['n_features'],
-                               random_state=params['seed'],
-                               n_classes=2,
-                               n_clusters_per_class=1)
-    return train_test_split(X, y, test_size=params.get('test_size', 0.33))

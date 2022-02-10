@@ -1,21 +1,27 @@
 # Causal-BaTLe
 
 
-
 ## Compute Canada Instructions
 
 * Source code and data: /home/raoki/projects/rrg-ester/raoki/batle
 
 * Env and checkpoints: /home/raoki/scratch/
-* https://www.notion.so/Compute-Canada-Wiki-Ester-Lab-869c7e3b51b54fb39970e0fbd7b8af3f
+* https://www.notion.so/Compute-Canada-Wiki-Ester-Lab-869c7e3b51b54fb39970e0fbd7b8af3f 
+* baselines https://github.com/oatml/ucate (bayesian NN + uncertainty) and https://github.com/anndvision/quince (with bounds)
+
 
 ## TODOS
+* cyberduck
 * Use checkpoints
 * TensorBoard
-* virtualenv 
-  * Add version of packages 
+* virtualenv - Add version of packages 
 * datasets
-* Adding logging 
+* Adding logging
+* bayesian model: trick is on the sampler functions
+* can I use kaggle dataset for my own researach? 
+https://www.kaggle.com/andrewmvd/retinal-disease-classification
+  https://www.kaggle.com/c/diabetic-retinopathy-detection/discussion/139291
+  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2769884/
 
 ## Setup
 
@@ -72,3 +78,18 @@ ssh -L 8888:cdr767.int.cedar.computecanada.ca:8888 USER@cedar.computecanada.ca
 
 Reference: 
 https://www.machinelearningplus.com/python/python-logging-guide/
+
+
+### Baselines Instructions
+
+ucate: 
+
+### Experiments 
+
+run dataset x method b times -> csv
+
+there are Data = [dataset1, ..., datasetn]
+
+there are Methods = [method1, ..., methodn]
+
+combine all the csvs
