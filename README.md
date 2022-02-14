@@ -8,7 +8,8 @@
 * Env and checkpoints: /home/raoki/scratch/
 * https://www.notion.so/Compute-Canada-Wiki-Ester-Lab-869c7e3b51b54fb39970e0fbd7b8af3f 
 * baselines https://github.com/oatml/ucate (bayesian NN + uncertainty) and https://github.com/anndvision/quince (with bounds)
-
+* transfer learning https://medium.com/georgian-impact-blog/transfer-learning-part-1-ed0c174ad6e7
+* drgonnet https://github.com/claudiashi57/dragonnet/blob/master/src/experiment/models.py
 
 ## TODOS
 * cyberduck

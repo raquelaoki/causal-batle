@@ -6,15 +6,17 @@ from sklearn.model_selection import train_test_split
 import CompBioAndSimulated_Datasets.simulated_data_multicause as bcdata  # local library / github repo
 import logging
 
+
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
-class DataSource():
+class DataSource:
     def __init__(self, x):
         self.x = x
 
 
-class DataTarget():
+class DataTarget:
     def __init__(self, x, t, y):
         self.x = x
         self.t = t
@@ -51,4 +53,5 @@ def make_gwas(params={}, seed=0):
     s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed, test_size=0.2)
     data_s = DataSource(s_x)
     data_t = DataTarget(t_x, t_t, t_y)
+    logging.info('Dataset GWAS - done!')
     return data_s, data_t

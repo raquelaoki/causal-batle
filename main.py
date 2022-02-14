@@ -13,7 +13,6 @@ import utils
 import yaml
 from data_preprocessing import make_dataset
 import logging
-import logging
 
 
 def main(config_path):
