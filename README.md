@@ -87,10 +87,22 @@ ucate:
 
 ### Experiments 
 
-run dataset x method b times -> csv
+* run dataset x method b times -> csv
+* there are Data = [dataset1, ..., datasetn]
+* there are Methods = [method1, ..., methodn]
+* combine all the csvs
 
-there are Data = [dataset1, ..., datasetn]
-
-there are Methods = [method1, ..., methodn]
-
-combine all the csvs
+### workflow 
+1) Fit dragonnet
+   * Check library references
+   * Debug method
+2) Wrapper to run dragonnet b times
+2) helper_parameters.py implement
+2) ??? implement IHDP to double check dragonnet MAE?   
+2) Fit gaussian-process dragonnet
+3) Fit causa-battle 
+4) Fit cevae
+5) Fit BART
+6) Fit X-learner, AIPW 
+7) Add new dataset (vision)
+8) Add another dataset

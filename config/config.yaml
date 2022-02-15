@@ -1,0 +1,21 @@
+parameters:
+    data: ['gwas']
+    n_sample: 5000
+    n_covariates: 1000
+    n_treatments: 1
+
+    model: 'dragonnet'
+    id: 'config1a'
+    suffle: True
+
+    batch_size: 100
+    max_epochs: 100
+
+
+    decay: 20
+    alpha: 0.01 #decay downgrad
+    gamma: 0.7 #Adam decay
+    lr: 0.01 #learning rate
+    wd: 0.05 #weight_decay
+
+

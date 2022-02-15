@@ -4,13 +4,12 @@ from new_method import NewMethod
 from sklearn.metrics import accuracy_score
 import logging
 
-
-def metric(y_true, y_pred):
-    return accuracy_score(y_true, y_pred)
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def run_methdos(X_train, X_test, y_train, y_test, params):
-    #TODO : update run_methods
+    # TODO : update run_methods
     """Run all params['methods'] methods.
     This function will run the methods and generate a pd.DataFrame with the results.
     Args:
