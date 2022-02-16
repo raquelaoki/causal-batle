@@ -12,6 +12,7 @@ class DataPrep(unittest.TestCase):
         except:
             self.assertRaises("GWAS: Dataset creation failed")
 
+# TODO: parameters
 
 if __name__ == '__main__':
     unittest.main()

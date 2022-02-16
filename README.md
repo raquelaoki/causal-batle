@@ -94,8 +94,15 @@ ucate:
 
 ### workflow 
 1) Fit dragonnet
-   * Check library references
-   * Debug method
+   * Add test
+   * predict all
+   * Tensorboard https://github.com/BorealisAI/MMoEEx-MTL/blob/main/main.py 
+     https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_in_notebooks.ipynb#scrollTo=Cu1fbH-S3oAX
+   * calculate ATE - all, in_train, in_test
+   * save best epoch model
+   * save output for data + model   
+   * Improve parameter naming
+
 2) Wrapper to run dragonnet b times
 2) helper_parameters.py implement
 2) ??? implement IHDP to double check dragonnet MAE?   

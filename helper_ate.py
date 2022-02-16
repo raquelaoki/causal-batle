@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from baselines import dragonnet
 from sklearn.metrics import accuracy_score, roc_curve
 import logging
 from torch.utils.data import DataLoader
@@ -61,7 +60,8 @@ def calculate_ate(data_loader, model, single_batch=False, type_ate='naive'):
 
 def _naive_ate(t_obs, y0_pred, y1_pred, t_pred):
     ite = (y1_pred - y0_pred)
-    return np.mean(truncate_by_g(ite, t_pred, level=truncate_level))
+    print(ite[0:10], t_pred[0:10])
+    return np.mean(truncate_by_g(ite, t_pred, level=0.05))
 
 
 def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
@@ -74,6 +74,7 @@ def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
 
 def truncate_by_g(attribute, g, level=0.05):
     keep_these = np.logical_and(g >= level, g <= 1. - level)
+    print('keeping', keep_these[0:10])
     return attribute[keep_these]
 
 

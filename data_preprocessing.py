@@ -85,11 +85,11 @@ def make_gwas(params={}, seed=0):
                                               n_units=params['sample_size'],
                                               n_causes=params["n_treatments"] + params['covariates_size'],
                                               true_causes=params["n_treatments"])
-    data_x, data_y, _, treatment_columns, treatment_effects, _ = data_setting.generate_samples()
+    data_x, data_y, _, treatment_columns, treatment_effects, _ = data_setting.generate_samples(prop=[0.4, 0.2, 0.35])
     data_t = data_x.iloc[:, treatment_columns[0]].values
     data_x.drop(data_x.columns[treatment_columns].values[0], axis=1, inplace=True)
     s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed, test_size=0.2)
     data_s = DataSource(s_x)
     data_t = DataTarget(t_x, t_t, t_y)
-    logging.info('Dataset GWAS - done!')
-    return data_s, data_t
+    logging.debug('Dataset Prep Complete')
+    return data_s, data_t, treatment_effects
