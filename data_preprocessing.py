@@ -61,7 +61,7 @@ class DataTarget:
         return loader_train, loader_val, loader_test, loader_all
 
 
-def make_gwas(params={}, seed=0):
+def make_gwas(params, seed=0):
     """ Make the gwas dataset.
 
     This function adapts the gwas dataset simulated at
@@ -74,16 +74,15 @@ def make_gwas(params={}, seed=0):
         data_t: DataTarget class, labeled (with treatment assigment and outcome) covariates
     """
     # Adding default values
-    params["sample_size"] = params.get('sample_size', 10000)
-    params['covariates_size'] = params.get('covariates_size', 1000)
+    params["n_sample"] = params.get('n_sample', 10000)
+    params['n_covariates'] = params.get('n_covariates', 1000)
     params['n_treatments'] = params.get('n_treatments', 1)
-
-    prop = 1 / params['covariates_size']
+    prop = 1 / params['n_covariates']
     data_setting = bcdata.gwas_simulated_data(prop_tc=prop,  # proportion ot true causes
                                               pca_path='CompBioAndSimulated_Datasets/data/tgp_pca2.txt',
                                               seed=seed,
-                                              n_units=params['sample_size'],
-                                              n_causes=params["n_treatments"] + params['covariates_size'],
+                                              n_units=params['n_sample'],
+                                              n_causes=params["n_treatments"] + params['n_covariates'],
                                               true_causes=params["n_treatments"])
     data_x, data_y, _, treatment_columns, treatment_effects, _ = data_setting.generate_samples(prop=[0.4, 0.2, 0.35])
     data_t = data_x.iloc[:, treatment_columns[0]].values
@@ -92,4 +91,4 @@ def make_gwas(params={}, seed=0):
     data_s = DataSource(s_x)
     data_t = DataTarget(t_x, t_t, t_y)
     logging.debug('Dataset Prep Complete')
-    return data_s, data_t, treatment_effects
+    return data_s, data_t, treatment_effects[treatment_columns]

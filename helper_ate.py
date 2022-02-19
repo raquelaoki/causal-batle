@@ -31,24 +31,33 @@ def calculate_ate(data_loader, model, single_batch=False, type_ate='naive'):
     Calculate the Average Treatment Effect
     :param data_loader: if neural networks, needs to be a DataLoader objs
     :param model: object
-    :param single_batch: True (all, train - contain several batches), False (val, test)
+    :param single_batch: False (all, train - contain several batches), True (val, test)
     :param type_ate: naive, aipw
     :return:
     """
-    if single_batch:
-        y_obs, t_obs, y0_pred, y1_pred, t_pred = [], [], [], [], []
+    if not single_batch:
+        y_obs, t_obs = np.array([]), np.array([])
+        y0_pred, y1_pred, t_pred = np.array([]), np.array([]), np.array([])
+
         for i, batch in enumerate(data_loader):
-            y_obs = np.concatenate([y_obs, batch[1]], 1)
-            t_obs = np.concatenate([t_obs, batch[2]], 1)
+            y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
+            t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
             t_predictions, y0_predictions, y1_predictions = model(batch[0])
-            y0_pred = np.concatenate([y0_pred, y0_predictions], 1)
-            y1_pred = np.concatenate([y1_pred, y1_predictions], 1)
-            t_pred = np.concatenate([t_pred, t_predictions], 1)
+            y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.detach().numpy().reshape(-1)], 0)
+            y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.detach().numpy().reshape(-1)], 0)
+            t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.detach().numpy().reshape(-1)], 0)
     else:
         batch = next(iter(data_loader))
         y_obs = batch[1]
         t_obs = batch[2]
         t_pred, y0_pred, y1_pred = model(batch[0])
+        t_pred = t_pred.detach().numpy().reshape(-1)
+        y0_pred = y0_pred.detach().numpy().reshape(-1)
+        y1_pred = y1_pred.detach().numpy().reshape(-1)
+
+        print('predictions - helper ate')
+        print(y0_pred[0:5],'\n',y1_pred[0:5],'\n',batch[1].numpy().reshape(-1)[0:5])
+        print(t_pred[0:5],'\n',batch[2].numpy().reshape(-1)[0:5])
 
     if type_ate == 'naive':
         return _naive_ate(t_obs, y0_pred, y1_pred, t_pred)
@@ -60,8 +69,8 @@ def calculate_ate(data_loader, model, single_batch=False, type_ate='naive'):
 
 def _naive_ate(t_obs, y0_pred, y1_pred, t_pred):
     ite = (y1_pred - y0_pred)
-    print(ite[0:10], t_pred[0:10])
-    return np.mean(truncate_by_g(ite, t_pred, level=0.05))
+    aux = truncate_by_g(ite, t_pred, level=0.05)
+    return np.mean(aux)
 
 
 def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
@@ -74,7 +83,6 @@ def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
 
 def truncate_by_g(attribute, g, level=0.05):
     keep_these = np.logical_and(g >= level, g <= 1. - level)
-    print('keeping', keep_these[0:10])
     return attribute[keep_these]
 
 

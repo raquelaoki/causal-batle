@@ -17,7 +17,6 @@ from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 from sklearn import metrics
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
@@ -34,18 +33,17 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class dragonnet(nn.Module):
-    def __init__(self, n_covariates, units1=200, units2=100, units3=1,
-                 binary_target=False, type_original=True):
+    def __init__(self, n_covariates, units1=200, units2=100,
+                   units3=1, type_original=True):
         super().__init__()
         self.units1 = units1
         self.units2 = units2
         self.units3 = units3
-        self.binary_target = binary_target
         self.representation_layer1 = nn.Linear(in_features=n_covariates, out_features=self.units1)
         self.representation_layer1_ = nn.Linear(in_features=self.units1, out_features=self.units1)
         self.type_original = type_original
         if self.type_original:
-            self.dragonnet_head = dragonnet_original(self.units1, self.units2, self.units3, self.binary_target)
+            self.dragonnet_head = dragonnet_original(self.units1, self.units2, self.units3)
         else:
             logging.debug("Gaussian Process not implemented yet.")
         # Activation functions.
@@ -53,7 +51,7 @@ class dragonnet(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.thhold = []  # For future metrics
 
-    def forward(self, inputs, inputs_t=None):
+    def forward(self, inputs):
         """
         Neural net predictive model. The dragon has three heads.
         Parameters:
@@ -64,50 +62,53 @@ class dragonnet(nn.Module):
 
         :return:
         """
+
         # Shared presentation.
         x = self.elu(self.representation_layer1(inputs))
         x = self.elu(self.representation_layer1_(x))
         x = self.elu(self.representation_layer1_(x))
-        #logger.debug('...x shape %i %i',x.shape[0],x.shape[1])
-        t_predictions, y0_predictions, y1_predictions = self.dragonnet_head(x)
-
-        return t_predictions, y0_predictions, y1_predictions
+        return self.dragonnet_head(x)
 
 
 class dragonnet_original(nn.Module):
     """ Dragonnet Original Head.
     """
-    def __init__(self, units1, units2, units3, binary_target):
-        super(dragonnet_original, self).__init__()
-        self.binary_target = binary_target
 
-        self.t_predictions = nn.Linear(in_features=units1, out_features=1)
-        self.head_layer2 = nn.Linear(in_features=units1, out_features=units2)
-        self.head_layer2_ = nn.Linear(in_features=units2, out_features=units2)
-        self.outcome_layer = nn.Linear(in_features=units2, out_features=units3)
+    def __init__(self, units1=200,units2=100, units3=1):
+        super(dragonnet_original, self).__init__()
+        self.units1 = units1
+        self.units2 = units2
+        self.units3 = units3
+
+        self.head_layer2 = nn.Linear(in_features=self.units1, out_features=self.units2)
+        self.head_layer2_ = nn.Linear(in_features=self.units2, out_features=self.units2)
+        self.outcome_layer = nn.Linear(in_features=self.units2, out_features=self.units3)
+        self.t_predictions = nn.Linear(in_features=self.units1, out_features=1)
+
         # Activation functions.
-        self.elu = nn.ELU()
+        self.elu = nn.ELU(alpha=0.5)
         self.sigmoid = nn.Sigmoid()
+        self.tahn = nn.Tanh()
 
     def forward(self, inputs):
-
-        # Propensity Score - Treatment Prediction.
-        t_predictions = self.sigmoid(self.t_predictions(inputs))
-
         # Treatment specific - first layer.
-        y0_hidden = self.elu(self.head_layer2(inputs))  # Missing: regularizers.l2
+        y0_hidden = self.elu(self.head_layer2(inputs))
         y1_hidden = self.elu(self.head_layer2(inputs))
 
         # Treatment specific - second layer.
-        y0_hidden = self.elu(self.head_layer2_(y0_hidden))
-        y1_hidden = self.elu(self.head_layer2_(y1_hidden))
+        y0_hidden = self.tahn(self.head_layer2_(y0_hidden))
+        y1_hidden = self.tahn(self.head_layer2_(y1_hidden))
 
         # Treatment specific - third layer.
         y0_predictions = self.outcome_layer(y0_hidden)
         y1_predictions = self.outcome_layer(y1_hidden)
 
-        if self.binary_target:
-            y0_predictions = self.sigmoid(y0_predictions)
-            y1_predictions = self.sigmoid(y1_predictions)
+        y0_predictions = self.tahn(y0_predictions)
+        y1_predictions = self.tahn(y1_predictions)
 
-        return t_predictions, y0_predictions, y1_predictions
+        t_predictions = self.sigmoid(self.t_predictions(inputs))
+        # y01_predictions = torch.cat((y0_predictions,y1_predictions),1)
+        predictions = {'y0':y0_predictions,
+                       'y1':y1_predictions,
+                       't':t_predictions, }
+        return predictions

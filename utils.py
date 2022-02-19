@@ -4,22 +4,14 @@ import helper_fit as hfit
 import data_preprocessing as dp
 from dragonnet import dragonnet
 
+#temp
+import numpy as np
+import sklearn as sk
+
+
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-
-def make_model(params):
-    logging.debug('Model - %s', params['model_name'])
-    if params['model_name'] == 'dragonnet':
-        model = dragonnet(n_covariates=params['n_covariates'], units1=params['units1'], units2=params['units2'],
-                          units3=params['units3'], binary_target=params['binary_target'],
-                          type_original=params['type_original'])
-
-        criterion = hfit.make_criterion_dragonnet_original(params['binary_target'])
-        metrics = hfit.make_metrics(include_treatment=True)
-
-    logger.debug('...model constructed')
-    return model, criterion, metrics
 
 
 def make_data(params):
@@ -30,19 +22,39 @@ def make_data(params):
 
 def run_model(params):
     data_s, data_t, tau = make_data(params)
-    model, criterion, metrics = make_model(params)
-    if params['use_transfer']:
-        tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader()
-        sloader_train, sloader_val, sloader_test, sloader_all = data_s.loader()
-    else:
-        tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader()
 
-    loss_train, loss_train_y, loss_train_t, metric_t_train, metric_y_train=\
-        hfit.fit(model, criterion, metrics, params,
-                 tloader_train, tloader_test, tloader_all, tloader_val)
-    return ate_naive_train, ate_aipw_train, ate_naive_test, ate_aipw_test, ate_naive_all, ate_aipw_all, tau
-    #logger.debug('The end')
-    #return tloader_train
+    #Running liner model
+    x_train = np.concatenate([data_t.x_train,data_t.t_train],1)
+    x_test = np.concatenate([data_t.x_test,data_t.t_test],1)
+    t_counter = [1-item for item in data_t.t_test]
+    x_counter = np.concatenate([data_t.x_test,t_counter],1)
+    m1 = sk.linear_model.LinearRegression().fit(x_train,data_t.y_train)
+
+    pred = m1.predict(x_test)
+    pred_counter = m1.predict(x_counter)
+    small_test={'pred':pred, 'obs':data_t.y_test,'t':data_t.t_test,'counter':pred_counter}
+
+    if params['use_transfer']:
+        tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader(batch=params['batch_size'],
+                                                                              shuffle=params['shuffle'],
+                                                                              seed=0)
+        sloader_train, sloader_val, sloader_test, sloader_all = data_s.loader(batch=params['batch_size'],
+                                                                              shuffle=params['shuffle'],
+                                                                              seed=0)
+    else:
+        tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader(batch=params['batch_size'],
+                                                                              shuffle=params['shuffle'],
+                                                                              seed=0
+                                                                              )
+
+    metrics, loss, ate = hfit.fit_wrapper(params=params,
+                                          loader_train=tloader_train,
+                                          loader_test=tloader_test,
+                                          loader_all=tloader_all,
+                                          loader_val=tloader_val)
+
+
+    return  metrics, loss, ate, tau, small_test
 
 
 def run_methdos_(X_train, X_test, y_train, y_test, params):
