@@ -34,13 +34,15 @@ logging.basicConfig(level=logging.DEBUG)
 
 class dragonnet(nn.Module):
     def __init__(self, n_covariates, units1=200, units2=100,
-                   units3=1, type_original=True):
+                 units3=1, type_original=True):
         super().__init__()
         self.units1 = units1
         self.units2 = units2
         self.units3 = units3
-        self.representation_layer1 = nn.Linear(in_features=n_covariates, out_features=self.units1)
-        self.representation_layer1_ = nn.Linear(in_features=self.units1, out_features=self.units1)
+        self.representation_layer1_1 = nn.Linear(in_features=n_covariates, out_features=self.units1)
+        self.representation_layer1_2 = nn.Linear(in_features=self.units1, out_features=self.units1)
+        self.representation_layer1_3 = nn.Linear(in_features=self.units1, out_features=self.units1)
+
         self.type_original = type_original
         if self.type_original:
             self.dragonnet_head = dragonnet_original(self.units1, self.units2, self.units3)
@@ -64,9 +66,9 @@ class dragonnet(nn.Module):
         """
 
         # Shared presentation.
-        x = self.elu(self.representation_layer1(inputs))
-        x = self.elu(self.representation_layer1_(x))
-        x = self.elu(self.representation_layer1_(x))
+        x = self.elu(self.representation_layer1_1(inputs))
+        x = self.elu(self.representation_layer1_2(x))
+        x = self.elu(self.representation_layer1_3(x))
         return self.dragonnet_head(x)
 
 
@@ -74,15 +76,20 @@ class dragonnet_original(nn.Module):
     """ Dragonnet Original Head.
     """
 
-    def __init__(self, units1=200,units2=100, units3=1):
+    def __init__(self, units1=200, units2=100, units3=1):
         super(dragonnet_original, self).__init__()
         self.units1 = units1
         self.units2 = units2
         self.units3 = units3
 
-        self.head_layer2 = nn.Linear(in_features=self.units1, out_features=self.units2)
-        self.head_layer2_ = nn.Linear(in_features=self.units2, out_features=self.units2)
-        self.outcome_layer = nn.Linear(in_features=self.units2, out_features=self.units3)
+        self.head_layer2_1_0 = nn.Linear(in_features=self.units1, out_features=self.units2)
+        self.head_layer2_2_0 = nn.Linear(in_features=self.units2, out_features=self.units2)
+        self.outcome_layer_0 = nn.Linear(in_features=self.units2, out_features=self.units3)
+
+        self.head_layer2_1_1 = nn.Linear(in_features=self.units1, out_features=self.units2)
+        self.head_layer2_2_1 = nn.Linear(in_features=self.units2, out_features=self.units2)
+        self.outcome_layer_1 = nn.Linear(in_features=self.units2, out_features=self.units3)
+
         self.t_predictions = nn.Linear(in_features=self.units1, out_features=1)
 
         # Activation functions.
@@ -92,23 +99,23 @@ class dragonnet_original(nn.Module):
 
     def forward(self, inputs):
         # Treatment specific - first layer.
-        y0_hidden = self.elu(self.head_layer2(inputs))
-        y1_hidden = self.elu(self.head_layer2(inputs))
+        y0_hidden = self.elu(self.head_layer2_1_0(inputs))
+        y1_hidden = self.elu(self.head_layer2_1_1(inputs))
 
         # Treatment specific - second layer.
-        y0_hidden = self.tahn(self.head_layer2_(y0_hidden))
-        y1_hidden = self.tahn(self.head_layer2_(y1_hidden))
+        y0_hidden = self.tahn(self.head_layer2_2_0(y0_hidden))
+        y1_hidden = self.tahn(self.head_layer2_2_1(y1_hidden))
 
         # Treatment specific - third layer.
-        y0_predictions = self.outcome_layer(y0_hidden)
-        y1_predictions = self.outcome_layer(y1_hidden)
+        y0_predictions = self.outcome_layer_0(y0_hidden)
+        y1_predictions = self.outcome_layer_1(y1_hidden)
 
         y0_predictions = self.tahn(y0_predictions)
         y1_predictions = self.tahn(y1_predictions)
 
         t_predictions = self.sigmoid(self.t_predictions(inputs))
         # y01_predictions = torch.cat((y0_predictions,y1_predictions),1)
-        predictions = {'y0':y0_predictions,
-                       'y1':y1_predictions,
-                       't':t_predictions, }
+        predictions = {'y0': y0_predictions,
+                       'y1': y1_predictions,
+                       't': t_predictions, }
         return predictions

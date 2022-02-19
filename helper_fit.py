@@ -18,7 +18,6 @@ def make_model(params):
         model = dragonnet(n_covariates=params['n_covariates'], units1=params['units1'], units2=params['units2'],
                           units3=params['units3'],
                           type_original=params['type_original'])
-
         criterion = [criterion_function_dragonnet_opt1, criterion_function_dragonnet_opt2]
         metric_functions = [metric_function_dragonnet_opt1, metric_function_dragonnet_opt2]
         fit = fit_dragonnet
@@ -29,31 +28,34 @@ def make_model(params):
 
 
 def metric_function_dragonnet_opt1(batch, predictions):
-    return roc_auc_score(batch[2], predictions['t'])
+    return roc_auc_score(batch[2], predictions['t'].detach().numpy())
 
 
 def metric_function_dragonnet_opt2(batch, predictions):
     y_pred = predictions['y0'] * (1 - predictions['t']) + predictions['y1'] * predictions['t']
-    return mean_squared_error(batch[1], y_pred)
+    return mean_squared_error(batch[1], y_pred.detach().numpy())
 
 
 def criterion_function_dragonnet_opt1(batch,
                                       predictions,
                                       device='cpu', set='train'):
-    y0_predictions, y1_predictions = predictions['y0'], predictions['y1']
-    y_obs = batch[1].to(device)
+    t_predictions = predictions['t']
     t_obs = batch[2].to(device)
-    loss_y0_batch = nn.BCEWithLogitsLoss(y0_predictions[t_obs == 0], y_obs[t_obs == 0])
-    loss_y1_batch = nn.BCEWithLogitsLoss(y1_predictions[t_obs == 1], y_obs[t_obs == 1])
-    return loss_y0_batch + loss_y1_batch
+    criterion = nn.BCEWithLogitsLoss()
+    return criterion(t_predictions, t_obs)
 
 
 def criterion_function_dragonnet_opt2(batch,
                                       predictions,
                                       device='cpu', set='train'):
-    t_predictions = predictions['t']
+    y0_predictions, y1_predictions = predictions['y0'], predictions['y1']
+    y_obs = batch[1].to(device)
     t_obs = batch[2].to(device)
-    return nn.MSELoss(t_predictions, t_obs)
+
+    criterion = nn.MSELoss()
+    loss_y0_batch = criterion(y0_predictions[t_obs == 0], y_obs[t_obs == 0])
+    loss_y1_batch = criterion(y1_predictions[t_obs == 1], y_obs[t_obs == 1])
+    return loss_y0_batch + loss_y1_batch
 
 
 def calculate_criterion(criterion_function, batch, predictions, device='cpu', set='train'):
@@ -127,7 +129,20 @@ def fit_dragonnet(epochs,
         loader_val=loader_val
     )
 
-    # TODO Freeze first layers
+    freeze = ['representation_layer1_1.weight',
+              'representation_layer1_1.bias',
+              'representation_layer1_2.weight',
+              'representation_layer1_2.bias',
+              'representation_layer1_3.weight',
+              'representation_layer1_3.bias',
+              'dragonnet_head.t_predictions.weight',
+              'dragonnet_head.t_predictions.bias'
+              ]
+
+    for name, param in model.named_parameters():
+        if name in freeze:
+            param.require_grad=False
+
     logger.debug('...starting opt2')
     model, loss_train_y, loss_val_y, metric_train_y, metric_val_y = fit_optimization(
         model=model,
@@ -181,8 +196,7 @@ def fit_optimization(model,
                                              device=device)
             metrics_batch = calculate_metric(metric_function=metric_function,
                                              batch=batch,
-                                             predictions=predictions,
-                                             device=device)
+                                             predictions=predictions)
             _loss += loss_batch.cpu().detach().numpy()
             _metrics += metrics_batch
             loss_batch.backward()
@@ -193,17 +207,13 @@ def fit_optimization(model,
         if use_validation:
             batch = next(iter(loader_val))
             predictions = model(batch[0].to(device))
-            loss_val[e] = calculate_criterion(params['model_name'],
-                                              criterion,
-                                              batch,
-                                              predictions,
-                                              final_outcome,
-                                              device)
-            metric_val[e] = calculate_metric(metric_function,
-                                             batch,
-                                             predictions,
-                                             final_outcome,
-                                             device)
+            loss_val[e] = calculate_criterion(criterion_function=criterion,
+                                              batch=batch,
+                                              predictions=predictions,
+                                              device=device)
+            metric_val[e] = calculate_metric(metric_function=metric_function,
+                                             batch=batch,
+                                             predictions=predictions)
         else:
             loss_val, metric_val = None, None
     return model, loss_train, loss_val, metric_train, metric_val
@@ -239,6 +249,7 @@ def fit_wrapper(params,
         writer_tensorboard = TensorboardWriter(path_logger, config_name)
 
     model, criterion, metric_functions, fit = make_model(params)
+
     if torch.cuda.is_available():
         model.to(device)
 
@@ -263,10 +274,15 @@ def fit_wrapper(params,
 
     # Metrics on testins set
     batch = next(iter(loader_test))
-    t_predictions, y0_predictions, y1_predictions = model(batch[0].to(device))
-    metrics['metric_test_y'], metrics['metric_test_t'] = calculate_metric(metrics, batch, t_predictions,
-                                                                          y0_predictions, y1_predictions,
-                                                                          device, include_treatment=True)
+    predictions = model(batch[0].to(device))
+    metrics['metric_test_t'] = calculate_metric(metric_function=metric_functions[0],
+                                                batch=batch,
+                                                predictions=predictions,
+                                                )
+    metrics['metric_test_y'] = calculate_metric(metric_function=metric_functions[1],
+                                                batch=batch,
+                                                predictions=predictions,
+                                                )
 
     logging.debug("...calculating ate")
     ate_naive_train = ate.calculate_ate(loader_train, model, single_batch=False, type_ate='naive')
@@ -279,18 +295,12 @@ def fit_wrapper(params,
     logging.debug("...fitting done.")
 
     # Organize output.
-    metrics = {'metric_y_train': metric_y_train, 'metric_t_train': metric_t_train,
-               'metric_y_test': metric_y_test, 'metric_t_test': metric_t_test}
-    losses = {'loss_y_train': loss_train_y, 'loss_t_train': loss_train_t}
-
-    if use_validation:
-        metrics['metric_y_val'] = metric_y_val
-        metrics['metric_t_val'] = metric_t_val
-        losses['loss_y_val'] = loss_val_y
-        losses['loss_t_val'] = loss_val_t
+    # metrics = {'metric_y_train': metric_y_train, 'metric_t_train': metric_t_train,
+    #           'metric_y_test': metric_y_test, 'metric_t_test': metric_t_test}
+    # losses = {'loss_y_train': loss_train_y, 'loss_t_train': loss_train_t}
 
     ate_estimated = {'ate_naive_train': ate_naive_train, 'ate_aipw_train': ate_aipw_train,
                      'ate_naive_test': ate_naive_test, 'ate_aipw_test': ate_aipw_test,
                      'ate_naive_all': ate_naive_all, 'ate_aipw_all': ate_aipw_all}
 
-    return metrics, losses, ate_estimated
+    return metrics, loss, ate_estimated
