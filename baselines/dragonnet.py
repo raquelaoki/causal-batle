@@ -93,7 +93,7 @@ class dragonnet_original(nn.Module):
         self.t_predictions = nn.Linear(in_features=self.units1, out_features=1)
 
         # Activation functions.
-        self.elu = nn.ELU(alpha=0.5)
+        self.elu = nn.ELU(alpha=0.25)
         self.sigmoid = nn.Sigmoid()
         self.tahn = nn.Tanh()
 
@@ -103,8 +103,8 @@ class dragonnet_original(nn.Module):
         y1_hidden = self.elu(self.head_layer2_1_1(inputs))
 
         # Treatment specific - second layer.
-        y0_hidden = self.tahn(self.head_layer2_2_0(y0_hidden))
-        y1_hidden = self.tahn(self.head_layer2_2_1(y1_hidden))
+        y0_hidden = self.elu(self.head_layer2_2_0(y0_hidden))
+        y1_hidden = self.elu(self.head_layer2_2_1(y1_hidden))
 
         # Treatment specific - third layer.
         y0_predictions = self.outcome_layer_0(y0_hidden)

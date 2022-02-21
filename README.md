@@ -94,6 +94,7 @@ ucate:
 
 ### workflow 
 1) Fit dragonnet
+   * opt 1 is not working. Double ckeck why that model is so bad.
    * test validation
    * Tensorboard https://github.com/BorealisAI/MMoEEx-MTL/blob/main/main.py 
      https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_in_notebooks.ipynb#scrollTo=Cu1fbH-S3oAX

@@ -41,7 +41,7 @@ def criterion_function_dragonnet_opt1(batch,
                                       device='cpu', set='train'):
     t_predictions = predictions['t']
     t_obs = batch[2].to(device)
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss()
     return criterion(t_predictions, t_obs)
 
 
