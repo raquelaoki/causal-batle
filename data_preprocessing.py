@@ -1,7 +1,10 @@
 from typing import Any
-
+from numpy.random import binomial
+from scipy.special import expit
+import numpy as np
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
@@ -10,7 +13,7 @@ import CompBioAndSimulated_Datasets.simulated_data_multicause as bcdata  # local
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 
 class DataSource:
@@ -19,13 +22,13 @@ class DataSource:
 
 
 class DataTarget:
-    def __init__(self, x, t, y, test_size=0.33, seed=0, validation=False):
+    def __init__(self, x, t, y, test_size=0.33, seed=0, use_validation=False):
         super(DataTarget, self).__init__()
-        self.validation = validation
+        self.use_validation = use_validation
 
         x_train, x_test, y_train, y_test, t_train, t_test = train_test_split(x, y, t,
                                                                              test_size=0.33, random_state=seed)
-        if validation:
+        if use_validation:
             x_train, x_val, y_train, y_val, t_train, t_val = train_test_split(x_train, y_train, t_train,
                                                                               test_size=0.15, random_state=seed)
             self.x_val = x_val.values
@@ -52,7 +55,7 @@ class DataTarget:
         loader_test = DataLoader(dataset_test, shuffle=False, batch_size=self.x_test.shape[0])
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
 
-        if self.validation:
+        if self.use_validation:
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val), Tensor(self.t_val))
             loader_val = DataLoader(dataset_val, shuffle=shuffle, batch_size=self.x_val.shape[0])
         else:
@@ -61,7 +64,7 @@ class DataTarget:
         return loader_train, loader_val, loader_test, loader_all
 
 
-def make_gwas(params, seed=0):
+def make_gwas(params, seed=0, unit_test=False):
     """ Make the gwas dataset.
 
     This function adapts the gwas dataset simulated at
@@ -77,18 +80,35 @@ def make_gwas(params, seed=0):
     params["n_sample"] = params.get('n_sample', 10000)
     params['n_covariates'] = params.get('n_covariates', 1000)
     params['n_treatments'] = params.get('n_treatments', 1)
+    params['use_validation'] = params.get('use_validation', False)
+    params['use_overlap_knob'] = params.get('use_overlap_knob', False)
+    params['overlap_knob'] = params.get('overlap_knob', 1)
     prop = 1 / params['n_covariates']
     data_setting = bcdata.gwas_simulated_data(prop_tc=prop,  # proportion ot true causes
                                               pca_path='CompBioAndSimulated_Datasets/data/tgp_pca2.txt',
                                               seed=seed,
                                               n_units=params['n_sample'],
                                               n_causes=params["n_treatments"] + params['n_covariates'],
-                                              true_causes=params["n_treatments"])
+                                              true_causes=params["n_treatments"],
+                                              unit_test=unit_test)
     data_x, data_y, _, treatment_columns, treatment_effects, _ = data_setting.generate_samples(prop=[0.4, 0.2, 0.35])
-    data_t = data_x.iloc[:, treatment_columns[0]].values
+    data_t = data_x.iloc[:, treatment_columns[0]].values.reshape(-1)
     data_x.drop(data_x.columns[treatment_columns].values[0], axis=1, inplace=True)
+
+    if params['use_overlap_knob']:
+        logger.debug('...adding overlap')
+        x_scale = StandardScaler()
+        x_sum = x_scale.fit_transform(data_x.sum(axis=1).values.reshape(-1, 1))
+        prob = expit(x_sum).reshape(-1)
+        prob_knob = [1 * (1 - params['overlap_knob']) if item > 0.5 else 0 for item in prob]
+        prob_knob = prob_knob + params['overlap_knob'] * prob
+        data_t = [binomial(1, item) for item in prob_knob]
+        data_t = np.array(data_t)
     s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed, test_size=0.2)
     data_s = DataSource(s_x)
-    data_t = DataTarget(t_x, t_t, t_y)
+    data_t = DataTarget(x=t_x,
+                        t=t_t,
+                        y=t_y,
+                        use_validation=params['use_validation'])
     logging.debug('Dataset Prep Complete')
     return data_s, data_t, treatment_effects[treatment_columns]

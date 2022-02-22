@@ -4,13 +4,11 @@ import helper_fit as hfit
 import data_preprocessing as dp
 from dragonnet import dragonnet
 
-#temp
+# temp
 import numpy as np
 import sklearn as sk
 
-
-
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -23,16 +21,19 @@ def make_data(params):
 def run_model(params):
     data_s, data_t, tau = make_data(params)
 
-    #Running liner model
-    x_train = np.concatenate([data_t.x_train,data_t.t_train],1)
-    x_test = np.concatenate([data_t.x_test,data_t.t_test],1)
-    t_counter = [1-item for item in data_t.t_test]
-    x_counter = np.concatenate([data_t.x_test,t_counter],1)
-    m1 = sk.linear_model.LinearRegression().fit(x_train,data_t.y_train)
+    # Running liner model tau = m1() - m0()
+    x_train, t_train, y_train = data_t.x_train, data_t.t_train.reshape(-1), data_t.y_train
+    x_test, t_test, y_test = data_t.x_test, data_t.t_test.reshape(-1), data_t.y_test
+    x_train0, x_train1 = x_train[t_train == 0, :], x_train[t_train == 1, :]
+    y_train0, y_train1 = y_train[t_train == 0], y_train[t_train == 1]
 
-    pred = m1.predict(x_test)
-    pred_counter = m1.predict(x_counter)
-    small_test={'pred':pred, 'obs':data_t.y_test,'t':data_t.t_test,'counter':pred_counter}
+    m0 = sk.linear_model.LinearRegression().fit(x_train0, y_train0)
+    m1 = sk.linear_model.LinearRegression().fit(x_train1, y_train1)
+
+    pred0 = m0.predict(x_test)
+    pred1 = m1.predict(x_test)
+
+    small_test = {'pred0': pred0, 'obs': y_test, 't': t_test, 'pred1': pred1}
 
     if params['use_transfer']:
         tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader(batch=params['batch_size'],
@@ -51,10 +52,10 @@ def run_model(params):
                                           loader_train=tloader_train,
                                           loader_test=tloader_test,
                                           loader_all=tloader_all,
-                                          loader_val=tloader_val)
+                                          loader_val=tloader_val,
+                                          use_validation=params['use_validation'])
 
-
-    return  metrics, loss, ate, tau, small_test
+    return metrics, loss, ate, tau, small_test
 
 
 def run_methdos_(X_train, X_test, y_train, y_test, params):

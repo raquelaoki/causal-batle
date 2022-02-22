@@ -29,12 +29,13 @@ import utils
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 
 class dragonnet(nn.Module):
     def __init__(self, n_covariates, units1=200, units2=100,
-                 units3=1, type_original=True):
+                 units3=1, type_original=True, use_dropout=False,
+                 dropout_p=0):
         super().__init__()
         self.units1 = units1
         self.units2 = units2
@@ -51,7 +52,13 @@ class dragonnet(nn.Module):
         # Activation functions.
         self.elu = nn.ELU()
         self.sigmoid = nn.Sigmoid()
-        self.thhold = []  # For future metrics
+        self.use_dropout = use_dropout
+        self.dropout_p = dropout_p
+
+        if self.use_dropout:
+            self.dropout = nn.Dropout(p=self.dropout_p)
+        else:
+            self.dropout = nn.Dropout(p=0)
 
     def forward(self, inputs):
         """
@@ -66,7 +73,7 @@ class dragonnet(nn.Module):
         """
 
         # Shared presentation.
-        x = self.elu(self.representation_layer1_1(inputs))
+        x = self.elu(self.representation_layer1_1(self.dropout(inputs)))
         x = self.elu(self.representation_layer1_2(x))
         x = self.elu(self.representation_layer1_3(x))
         return self.dragonnet_head(x)
@@ -76,11 +83,13 @@ class dragonnet_original(nn.Module):
     """ Dragonnet Original Head.
     """
 
-    def __init__(self, units1=200, units2=100, units3=1):
+    def __init__(self, units1=200, units2=100, units3=1, use_dropout=False, dropout_p=0):
         super(dragonnet_original, self).__init__()
         self.units1 = units1
         self.units2 = units2
         self.units3 = units3
+        self.use_dropout=use_dropout
+        self.dropout_p=dropout_p
 
         self.head_layer2_1_0 = nn.Linear(in_features=self.units1, out_features=self.units2)
         self.head_layer2_2_0 = nn.Linear(in_features=self.units2, out_features=self.units2)
@@ -96,11 +105,16 @@ class dragonnet_original(nn.Module):
         self.elu = nn.ELU(alpha=0.25)
         self.sigmoid = nn.Sigmoid()
         self.tahn = nn.Tanh()
+        if self.use_dropout:
+            self.dropout = nn.Dropout(p=self.dropout_p)
+        else:
+            self.dropout = nn.Dropout(p=0)
 
     def forward(self, inputs):
         # Treatment specific - first layer.
-        y0_hidden = self.elu(self.head_layer2_1_0(inputs))
-        y1_hidden = self.elu(self.head_layer2_1_1(inputs))
+        y0_hidden = self.elu(self.head_layer2_1_0(self.dropout(inputs)))
+        y1_hidden = self.elu(self.head_layer2_1_1(self.dropout(inputs)))
+
 
         # Treatment specific - second layer.
         y0_hidden = self.elu(self.head_layer2_2_0(y0_hidden))
@@ -113,9 +127,9 @@ class dragonnet_original(nn.Module):
         y0_predictions = self.tahn(y0_predictions)
         y1_predictions = self.tahn(y1_predictions)
 
-        t_predictions = self.sigmoid(self.t_predictions(inputs))
-        # y01_predictions = torch.cat((y0_predictions,y1_predictions),1)
+        t_predictions = self.sigmoid(self.t_predictions(self.dropout(inputs)))
         predictions = {'y0': y0_predictions,
                        'y1': y1_predictions,
-                       't': t_predictions, }
+                       't': t_predictions}
+
         return predictions
