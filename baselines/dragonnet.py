@@ -54,7 +54,7 @@ class dragonnet(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.use_dropout = use_dropout
         self.dropout_p = dropout_p
-
+        self.batchnorm = nn.BatchNorm1d(self.units1)
         if self.use_dropout:
             self.dropout = nn.Dropout(p=self.dropout_p)
         else:
@@ -74,9 +74,9 @@ class dragonnet(nn.Module):
 
         # Shared presentation.
         x = self.elu(self.representation_layer1_1(self.dropout(inputs)))
-        x = self.elu(self.representation_layer1_2(x))
+        x = self.elu(self.representation_layer1_2(self.batchnorm(x)))
         x = self.elu(self.representation_layer1_3(x))
-        return self.dragonnet_head(x)
+        return self.dragonnet_head(self.batchnorm(self.dropout(x)))
 
 
 class dragonnet_original(nn.Module):
@@ -105,6 +105,7 @@ class dragonnet_original(nn.Module):
         self.elu = nn.ELU(alpha=0.25)
         self.sigmoid = nn.Sigmoid()
         self.tahn = nn.Tanh()
+
         if self.use_dropout:
             self.dropout = nn.Dropout(p=self.dropout_p)
         else:
@@ -112,13 +113,12 @@ class dragonnet_original(nn.Module):
 
     def forward(self, inputs):
         # Treatment specific - first layer.
-        y0_hidden = self.elu(self.head_layer2_1_0(self.dropout(inputs)))
-        y1_hidden = self.elu(self.head_layer2_1_1(self.dropout(inputs)))
-
+        y0_hidden = self.elu(self.head_layer2_1_0(inputs))
+        y1_hidden = self.elu(self.head_layer2_1_1(inputs))
 
         # Treatment specific - second layer.
-        y0_hidden = self.elu(self.head_layer2_2_0(y0_hidden))
-        y1_hidden = self.elu(self.head_layer2_2_1(y1_hidden))
+        y0_hidden = self.elu(self.head_layer2_2_0(self.dropout(y0_hidden)))
+        y1_hidden = self.elu(self.head_layer2_2_1(self.dropout(y1_hidden)))
 
         # Treatment specific - third layer.
         y0_predictions = self.outcome_layer_0(y0_hidden)
@@ -127,7 +127,7 @@ class dragonnet_original(nn.Module):
         y0_predictions = self.tahn(y0_predictions)
         y1_predictions = self.tahn(y1_predictions)
 
-        t_predictions = self.sigmoid(self.t_predictions(self.dropout(inputs)))
+        t_predictions = self.sigmoid(self.t_predictions(inputs))
         predictions = {'y0': y0_predictions,
                        'y1': y1_predictions,
                        't': t_predictions}

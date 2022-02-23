@@ -178,8 +178,8 @@ def fit_dragonnet(epochs,
 
     for e in range(epochs):
         torch.cuda.empty_cache()
-        _metrics_t, _metrics_y = 0, 0
-        _loss_t, _loss_y = 0, 0
+        _metrics_t, _metrics_y = [],[]
+        _loss_t, _loss_y = [],[]
         for i, batch in enumerate(loader_train):
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
@@ -194,15 +194,15 @@ def fit_dragonnet(epochs,
             loss_batch = loss_batch_t + loss_batch_y
             loss_batch.backward()
             optimizer.step()
-            _loss_t += loss_batch_t.cpu().detach().numpy()
-            _loss_y += loss_batch_y.cpu().detach().numpy()
-            _metrics_t += metrics_batch_t
-            _metrics_t += metrics_batch_y
+            _loss_t.append(loss_batch_t.cpu().detach().numpy())
+            _loss_y.append(loss_batch_y.cpu().detach().numpy())
+            _metrics_t.append(metrics_batch_t)
+            _metrics_y.append(metrics_batch_y)
 
-        loss_train_t[e] = _loss_t / (i + 1)
-        loss_train_y[e] = _loss_y / (i + 1)
-        metric_train_t[e] = _metrics_t / (i + 1)
-        metric_train_y[e] = _metrics_y / (i + 1)
+        loss_train_t[e] = np.mean(_loss_t)
+        loss_train_y[e] = np.mean(_loss_y )
+        metric_train_t[e] = np.mean(_metrics_t)
+        metric_train_y[e] = np.mean(_metrics_y )
 
         if use_validation:
             batch = next(iter(loader_val))
@@ -291,11 +291,11 @@ def fit_wrapper(params,
 
     logging.debug("...calculating ate")
     ate_naive_train, ate_aipw_train = ate.calculate_ate(loader_train, model, single_batch=False,
-                                                        include_aipw=True, thhold=metrics['thhold'])
+                                                        include_aipw=True, title='Train')
     ate_naive_test, ate_aipw_test = ate.calculate_ate(loader_test, model, single_batch=True,
-                                                      include_aipw=True, thhold=metrics['thhold'])
+                                                      include_aipw=True, title='test')
     ate_naive_all, ate_aipw_all = ate.calculate_ate(loader_all, model, single_batch=False,
-                                                    include_aipw=True, thhold=metrics['thhold'])
+                                                    include_aipw=True, title='all')
 
     logging.debug("...fitting done.")
 

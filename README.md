@@ -12,12 +12,9 @@
 * drgonnet https://github.com/claudiashi57/dragonnet/blob/master/src/experiment/models.py
 
 ## TODOS
-* cyberduck
 * Use checkpoints
 * TensorBoard
-* virtualenv - Add version of packages 
 * datasets
-* Adding logging
 * bayesian model: trick is on the sampler functions
 * can I use kaggle dataset for my own researach? 
 https://www.kaggle.com/andrewmvd/retinal-disease-classification
@@ -94,21 +91,21 @@ ucate:
 
 ### workflow 
 1) Fit dragonnet
-   * opt 1 is not working. Double ckeck why that model is so bad.
-   * test validation
-   * Tensorboard https://github.com/BorealisAI/MMoEEx-MTL/blob/main/main.py 
-     https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_in_notebooks.ipynb#scrollTo=Cu1fbH-S3oAX
-   * save best epoch model
-   * save output for data + model   
-   * Improve parameter naming
+    * check implementation with IHDP
+    * target regularizer
+    * Tensorboard https://github.com/BorealisAI/MMoEEx-MTL/blob/main/main.py 
+      https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_in_notebooks.ipynb#scrollTo=Cu1fbH-S3oAX
+    * save best epoch model
+    * save output for data + model   
+    * Improve parameter naming
 
-2) Wrapper to run dragonnet b times
-2) helper_parameters.py implement
-2) ??? implement IHDP to double check dragonnet MAE?   
-2) Fit gaussian-process dragonnet
-3) Fit causa-battle 
-4) Fit cevae
-5) Fit BART
-6) Fit X-learner, AIPW 
-7) Add new dataset (vision)
-8) Add another dataset
+3) Wrapper to run dragonnet b times
+4) helper_parameters.py implement
+5) ??? implement IHDP to double check dragonnet MAE?   
+6) Fit gaussian-process dragonnet
+7) Fit causa-battle 
+8) Fit cevae
+9) Fit BART
+10) Fit X-learner, AIPW 
+11) Add new dataset (vision)
+12) Add another dataset

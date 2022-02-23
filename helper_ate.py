@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def calculate_ate(data_loader, model,
                   single_batch=False,
                   include_aipw=True,
-                  thhold=None):
+                  title=''):
     """
     Calculate the Average Treatment Effect
     :param data_loader: if neural networks, needs to be a DataLoader objs
@@ -36,17 +36,16 @@ def calculate_ate(data_loader, model,
 
     else:
         batch = next(iter(data_loader))
-        y_obs = batch[1]
-        t_obs = batch[2]
+        y_obs = batch[1].detach().numpy().reshape(-1)
+        t_obs = batch[2].detach().numpy().reshape(-1)
         predictions = model(inputs=batch[0])
         t_pred, y0_pred, y1_pred = predictions['t'], predictions['y0'], predictions['y1']
         t_pred = t_pred.detach().numpy().reshape(-1)
         y0_pred = y0_pred.detach().numpy().reshape(-1)
         y1_pred = y1_pred.detach().numpy().reshape(-1)
 
-
-    t_pred = np.array(t_pred)
-    print('Sample of t_pred', t_pred[0:5],t_obs[0:5])
+    print('Sample of t_pred -',title,'  ', t_pred[0:5],t_obs[0:5])
+    print('Sample of y_pred -',title,'  ', y0_pred[0:5],y1_pred[0:5],y_obs[0:5])
 
     if include_aipw:
         return _naive_ate(y0_pred, y1_pred, t_pred), _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred)
