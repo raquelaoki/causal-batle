@@ -17,6 +17,9 @@ def make_data(params):
     if params['data_name'] == 'gwas':
         data_s, data_t, tau = dp.make_gwas(params)
         return data_s, data_t, tau
+    elif params['data_name']=='ihdp':
+        #data_s, data_t, tau = dp.make_ihdp(params)
+        return dp.make_ihdp(params)
 
 
 def run_model(params):

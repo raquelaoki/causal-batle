@@ -5,7 +5,7 @@ Check the consistency of the parameters and complete some missing fields based o
 """
 import logging
 
-#logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -15,12 +15,13 @@ def create_if_not_available(parameters, default_keys):
     return parameters
 
 
-
 def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                     batch_size=200, lr=0.01, weight_decay=0.01, units1=100, units2=50, units3=1,
                     n_sample=5000, n_covariates=1000, use_validation=False,
-                    use_dropout=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1):
-    params = {'data_name': data_name}
+                    use_dropout=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1,
+                    seed=1):
+    params = {'data_name': data_name, 'model_name':model_name, 'seed':seed}
+
     if params['data_name'] == 'gwas':
         params = make_parameters_data_gwas(params=params,
                                            n_sample=n_sample,
@@ -28,8 +29,17 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                                            use_overlap_knob=use_overlap_knob,
                                            overlap_knob=overlap_knob
                                            )
+    elif params['data_name'] == 'ihdp':
+        params = make_paramters_data_ihdp(params=params,
+                                          #n_sample=n_sample,
+                                          #n_covariates=n_covariates,
+                                          use_overlap_knob=use_overlap_knob,
+                                          overlap_knob=overlap_knob
+                                          )
+    else:
+        logger.debug('...data not implemented')
 
-    params['model_name'] = model_name
+    #print('update here',params)
     if params['model_name'] == 'dragonnet':
         params = make_parameters_model_dragonnet(params, max_epochs=max_epochs,
                                                  batch_size=batch_size, lr=lr,
@@ -52,6 +62,21 @@ def make_parameters_data_gwas(params,
     params['n_treatments'] = n_treatments
     params['use_overlap_knob'] = use_overlap_knob
     params['overlap_knob'] = overlap_knob
+    return params
+
+
+def make_paramters_data_ihdp(params,
+                             n_sample=747,
+                             n_covariates=25,
+                             binary_target=False,
+                             use_overlap_knob=False,
+                             overlap_knob=1):
+    params['binary_target'] = binary_target
+    params['use_overlap_knob'] = use_overlap_knob
+    params['overlap_knob'] = overlap_knob
+    params['n_covariates'] = n_covariates
+    params['n_sample'] = n_sample
+    params['n_treatments'] = 1
     return params
 
 
