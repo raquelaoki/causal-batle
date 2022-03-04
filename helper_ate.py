@@ -18,7 +18,6 @@ def calculate_ate(data_loader, model,
     :param model: object
     :param single_batch: False (all, train - contain several batches), True (val, test)
     :param include_aipw: if True, calculate naive and aipw. If False, only calculate naive.
-    :param thhold: optimal cut off calculated on training set.
     :return:
     """
     if not single_batch:

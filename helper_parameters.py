@@ -9,6 +9,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def create_if_not_available(parameters, default_keys):
+    for key in default_keys:
+        parameters[key] = parameters.get(key, default_keys[key])
+    return parameters
+
+
+
 def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                     batch_size=200, lr=0.01, weight_decay=0.01, units1=100, units2=50, units3=1,
                     n_sample=5000, n_covariates=1000, use_validation=False,

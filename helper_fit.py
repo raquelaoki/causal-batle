@@ -1,17 +1,18 @@
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
+#from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
 import logging
 import torch.nn as nn
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import helper_ate as ate
-from dragonnet import dragonnet
+import dragonnet
 
-#logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
+# Do i use find_optimal?
 def _find_optimal_cutoff(target, predicted):
     """ Find the optimal probability cutoff point for a classification model related to event rate
     Parameters
@@ -46,83 +47,37 @@ def find_optimal_cutoff_wrapper_t(loader_train, model, device):
 
 
 def make_model(params):
+    """
+    Create the model, criterion, and metrics according to type of model selected.
+    :param params: dictionaty. Required key: {model_name}. Optinal keys: architecture parameters;
+    :return: model(nn.Module), criterion (list of criterions),
+        metric_functions (list of metrics), fit (funtion to train model)
+    """
     logging.debug('Model - %s', params['model_name'])
     if params['model_name'] == 'dragonnet':
-        model = dragonnet(n_covariates=params['n_covariates'], units1=params['units1'], units2=params['units2'],
-                          units3=params['units3'],
-                          type_original=params['type_original'])
-        criterion = [_criterion_function_dragonnet_t, _criterion_function_dragonnet_y]
-        metric_functions = [_metric_function_dragonnet_t, _metric_function_dragonnet_y]
-        fit = fit_dragonnet
+        model = dragonnet.dragonnet(n_covariates=params['n_covariates'], units1=params['units1'],
+                                    units2=params['units2'],
+                                    units3=params['units3'],
+                                    type_original=params['type_original'])
+        criterion = [dragonnet.criterion_function_dragonnet_t,
+                     dragonnet.criterion_function_dragonnet_y]
+        metric_functions = [dragonnet.metric_function_dragonnet_t,
+                            dragonnet.metric_function_dragonnet_y]
+        fit = dragonnet.fit_dragonnet
     else:
         logging.warning('%s not implemented', params['model_name'])
     logger.debug('...model constructed')
     return model, criterion, metric_functions, fit
 
 
-def _metric_function_dragonnet_t(batch, predictions):
-    return roc_auc_score(batch[2], predictions['t'].detach().numpy())
-
-
-def _metric_function_dragonnet_y(batch, predictions):
-    y_pred = predictions['y0'] * (1 - predictions['t']) + predictions['y1'] * predictions['t']
-    return mean_squared_error(batch[1], y_pred.detach().numpy())
-
-
-def _criterion_function_dragonnet_t(batch,
-                                    predictions,
-                                    device='cpu', set='train'):
-    t_predictions = predictions['t']
-    t_obs = batch[2].to(device)
-    criterion = nn.BCELoss()
-    return criterion(t_predictions, t_obs)
-
-
-def _criterion_function_dragonnet_y(batch,
-                                    predictions,
-                                    device='cpu', set='train'):
-    y0_predictions, y1_predictions = predictions['y0'], predictions['y1']
-    y_obs = batch[1].to(device)
-    t_obs = batch[2].to(device)
-
-    criterion = nn.MSELoss()
-    loss_y0_batch = criterion(y0_predictions[t_obs == 0], y_obs[t_obs == 0])
-    loss_y1_batch = criterion(y1_predictions[t_obs == 1], y_obs[t_obs == 1])
-    return loss_y0_batch + loss_y1_batch
-
-
-def _calculate_criterion_dragonnet(criterion_function, batch, predictions, device='cpu', set='train'):
-    loss_t = _calculate_criterion(criterion_function=criterion_function[0],
-                                  batch=batch,
-                                  predictions=predictions,
-                                  device=device,
-                                  set=set)
-    loss_y = _calculate_criterion(criterion_function=criterion_function[1],
-                                  batch=batch,
-                                  predictions=predictions,
-                                  device=device,
-                                  set=set)
-    return loss_t, loss_y
-
-
 def _calculate_criterion(criterion_function, batch, predictions, device='cpu', set='train'):
     return criterion_function(batch, predictions, device=device, set=set)
-
 
 def _calculate_metric(metric_function, batch, predictions):
     return metric_function(batch, predictions)
 
 
-def _calculate_metric_dragonnet(metrics_functions, batch, predictions):
-    metrics_t = _calculate_metric(metric_function=metrics_functions[0],
-                                  batch=batch,
-                                  predictions=predictions)
-    metrics_y = _calculate_metric(metric_function=metrics_functions[0],
-                                  batch=batch,
-                                  predictions=predictions)
-    return metrics_t, metrics_y
-
-
+# TODO: use
 class TensorboardWriter:
     def __init__(self, path_logger, name_config):
         date = self.get_date()
@@ -158,93 +113,16 @@ def update_tensorboar(writer_tensorboard, values, e, set='train'):
     return writer_tensorboard
 
 
-def fit_dragonnet(epochs,
-                  model,
-                  loader_train,
-                  optimizer,
-                  criterion,
-                  metrics_functions,
-                  use_validation,
-                  device,
-                  loader_val=None):
-    logger.debug('...starting')
-
-    loss_train_t, metric_train_t = np.zeros(epochs), np.zeros(epochs)
-    loss_train_y, metric_train_y = np.zeros(epochs), np.zeros(epochs)
-
-    if use_validation:
-        loss_val_t, metric_val_t = np.zeros(epochs), np.zeros(epochs)
-        loss_val_y, metric_val_y = np.zeros(epochs), np.zeros(epochs)
-
-    for e in range(epochs):
-        torch.cuda.empty_cache()
-        _metrics_t, _metrics_y = [],[]
-        _loss_t, _loss_y = [],[]
-        for i, batch in enumerate(loader_train):
-            optimizer.zero_grad()
-            predictions = model(batch[0].to(device))
-            loss_batch_t, loss_batch_y = _calculate_criterion_dragonnet(criterion_function=criterion,
-                                                                        batch=batch,
-                                                                        predictions=predictions,
-                                                                        device=device)
-
-            metrics_batch_t, metrics_batch_y = _calculate_metric_dragonnet(metrics_functions=metrics_functions,
-                                                                           batch=batch,
-                                                                           predictions=predictions)
-            loss_batch = loss_batch_t + loss_batch_y
-            loss_batch.backward()
-            optimizer.step()
-            _loss_t.append(loss_batch_t.cpu().detach().numpy())
-            _loss_y.append(loss_batch_y.cpu().detach().numpy())
-            _metrics_t.append(metrics_batch_t)
-            _metrics_y.append(metrics_batch_y)
-
-        loss_train_t[e] = np.mean(_loss_t)
-        loss_train_y[e] = np.mean(_loss_y )
-        metric_train_t[e] = np.mean(_metrics_t)
-        metric_train_y[e] = np.mean(_metrics_y )
-
-        if use_validation:
-            batch = next(iter(loader_val))
-            predictions = model(batch[0].to(device))
-
-            loss_val_t[e], loss_val_y[e] = _calculate_criterion_dragonnet(criterion_function=criterion,
-                                                                          batch=batch,
-                                                                          predictions=predictions,
-                                                                          device=device)
-            metric_val_t[e], metric_val_y[e] = _calculate_metric_dragonnet(metrics_functions=metrics_functions,
-                                                                           batch=batch,
-                                                                           predictions=predictions)
-        else:
-            loss_val_t[e], loss_val_y[e] = None, None
-            metric_val_t[e], metric_val_y[e] = None, None
-
-    loss = {'loss_train_t': loss_train_t,
-            'loss_val_t': loss_val_t,
-            'loss_train_y': loss_train_y,
-            'loss_val_y': loss_val_y
-            }
-    metrics = {'metric_train_t': metric_train_t,
-               'metric_val_t': metric_val_t,
-               'metric_train_y': metric_train_y,
-               'metric_val_y': metric_val_y
-               }
-
-    thhold = find_optimal_cutoff_wrapper_t(loader_train=loader_train, model=model, device=device)
-    metrics['thhold'] = thhold
-
-    return model, loss, metrics
-
-
 def fit_wrapper(params,
                 loader_train, loader_test, loader_all,
                 loader_val=None,
                 use_tensorboard=False,
                 use_validation=False):
-    logger.debug("...fitting %s", params['model_name'])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.debug("...using %s", device)
     np.random.seed(params['seed'])
+
+    logger.debug("...fitting %s", params['model_name'])
+    logger.debug("...using %s", device)
 
     if use_validation:
         best_metric_y_val = 999
@@ -269,6 +147,8 @@ def fit_wrapper(params,
                                use_validation=use_validation,
                                device=device,
                                loader_val=loader_val)
+    # Change model to eval mode
+    model.eval()
 
     if use_tensorboard:
         values = [loss_train_t[e], loss_train_y[e], metrics_train_t[e], metrics_train_y[e]]

@@ -91,21 +91,24 @@ ucate:
 
 ### workflow 
 1) Fit dragonnet
-    * check implementation with IHDP
-    * target regularizer
+    * debug create_if_not_available in helper_param
+    * debug new implementation
+    * check implementation with IHDP: download and load from CompBioAndSimulated_Datasets
+    * target regularizer - test TargetedLoss
     * Tensorboard https://github.com/BorealisAI/MMoEEx-MTL/blob/main/main.py 
       https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_in_notebooks.ipynb#scrollTo=Cu1fbH-S3oAX
     * save best epoch model
     * save output for data + model   
     * Improve parameter naming
 
-3) Wrapper to run dragonnet b times
-4) helper_parameters.py implement
-5) ??? implement IHDP to double check dragonnet MAE?   
-6) Fit gaussian-process dragonnet
-7) Fit causa-battle 
-8) Fit cevae
-9) Fit BART
-10) Fit X-learner, AIPW 
-11) Add new dataset (vision)
-12) Add another dataset
+3) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
+4) Wrapper to run dragonnet b times
+5) helper_parameters.py implement
+6) ??? implement IHDP to double check dragonnet MAE?   
+7) Fit gaussian-process dragonnet
+8) Fit causa-battle 
+9) Fit cevae
+10) Fit BART
+11) Fit X-learner, AIPW 
+12) Add new dataset (vision)
+13) Add another dataset

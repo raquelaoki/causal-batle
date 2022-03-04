@@ -8,8 +8,9 @@ from sklearn.preprocessing import StandardScaler
 
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
+import helper_parameters as hp
 
-import CompBioAndSimulated_Datasets.simulated_data_multicause as bcdata  # local library / github repo
+import CompBioAndSimulated_Datasets.simulated_data_binarycause as bcdata  # local library / github repo
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,12 +78,10 @@ def make_gwas(params, seed=0, unit_test=False):
         data_t: DataTarget class, labeled (with treatment assigment and outcome) covariates
     """
     # Adding default values
-    params["n_sample"] = params.get('n_sample', 10000)
-    params['n_covariates'] = params.get('n_covariates', 1000)
-    params['n_treatments'] = params.get('n_treatments', 1)
-    params['use_validation'] = params.get('use_validation', False)
-    params['use_overlap_knob'] = params.get('use_overlap_knob', False)
-    params['overlap_knob'] = params.get('overlap_knob', 1)
+    _key = {'n_sample':10000, 'n_covariates':1000, 'n_treatments':1, 'use_validation': False,
+            'use_overlap_knob':False, 'overlap_knob':1}
+    params = hp.create_if_not_available(params, _key)
+
     prop = 1 / params['n_covariates']
     data_setting = bcdata.gwas_simulated_data(prop_tc=prop,  # proportion ot true causes
                                               pca_path='CompBioAndSimulated_Datasets/data/tgp_pca2.txt',
@@ -91,9 +90,7 @@ def make_gwas(params, seed=0, unit_test=False):
                                               n_causes=params["n_treatments"] + params['n_covariates'],
                                               true_causes=params["n_treatments"],
                                               unit_test=unit_test)
-    data_x, data_y, _, treatment_columns, treatment_effects, _ = data_setting.generate_samples(prop=[0.4, 0.2, 0.35])
-    data_t = data_x.iloc[:, treatment_columns[0]].values.reshape(-1)
-    data_x.drop(data_x.columns[treatment_columns].values[0], axis=1, inplace=True)
+    data_x, data_y, data_t, tau = data_setting.generate_samples(prop=[0.4, 0.2, 0.35])
 
     if params['use_overlap_knob']:
         logger.debug('...adding overlap')
@@ -104,6 +101,8 @@ def make_gwas(params, seed=0, unit_test=False):
         prob_knob = prob_knob + params['overlap_knob'] * prob
         data_t = [binomial(1, item) for item in prob_knob]
         data_t = np.array(data_t)
+
+    data_t = data_t.reshape(-1)
     s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed, test_size=0.2)
     data_s = DataSource(s_x)
     data_t = DataTarget(x=t_x,
@@ -111,4 +110,11 @@ def make_gwas(params, seed=0, unit_test=False):
                         y=t_y,
                         use_validation=params['use_validation'])
     logging.debug('Dataset Prep Complete')
-    return data_s, data_t, treatment_effects[treatment_columns]
+    return data_s, data_t, tau # treatment_effects[treatment_columns]
+
+
+def make_ihdp(params, seed=0):
+    data_setting = bcdata.ihdp_data()
+    #data_x, data_y, treatment_columns, treatment_effects =
+    return  data_setting.generate_samples()
+

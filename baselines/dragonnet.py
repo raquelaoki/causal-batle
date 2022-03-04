@@ -18,6 +18,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
 
 import tensorflow as tf
 import utils
@@ -29,7 +30,9 @@ import utils
 import logging
 
 logger = logging.getLogger(__name__)
-#logging.basicConfig(level=logging.DEBUG)
+
+
+# logging.basicConfig(level=logging.DEBUG)
 
 
 class dragonnet(nn.Module):
@@ -88,8 +91,8 @@ class dragonnet_original(nn.Module):
         self.units1 = units1
         self.units2 = units2
         self.units3 = units3
-        self.use_dropout=use_dropout
-        self.dropout_p=dropout_p
+        self.use_dropout = use_dropout
+        self.dropout_p = dropout_p
 
         self.head_layer2_1_0 = nn.Linear(in_features=self.units1, out_features=self.units2)
         self.head_layer2_2_0 = nn.Linear(in_features=self.units2, out_features=self.units2)
@@ -133,3 +136,177 @@ class dragonnet_original(nn.Module):
                        't': t_predictions}
 
         return predictions
+
+
+class TargetedLoss(nn.Module):
+
+    def __init__(self):
+        super(TargetedLoss, self).__init__()
+
+    def forward(self, y_obs, y_pred, t_obs, t_pred, epislon):
+        t1 = torch.div(t_obs,
+                       torch.add(t_pred, 0.01))
+        t0 = torch.dic(torch.sub(t_obs, -1),
+                       torch.add(torch.sub(t_pred, -1)), 0.01)
+        t = torch.mul(torch.sub(t1,t0), epislon)
+
+        loss = torch.add(y_pred, t)
+        loss = torch.sub(y_obs, loss)
+        return torch.mean(loss)
+
+
+def metric_function_dragonnet_t(batch, predictions):
+    return roc_auc_score(batch[2], predictions['t'].detach().numpy())
+
+
+def metric_function_dragonnet_y(batch, predictions):
+    y_pred = predictions['y0'] * (1 - predictions['t']) + predictions['y1'] * predictions['t']
+    return mean_squared_error(batch[1], y_pred.detach().numpy())
+
+
+def criterion_function_dragonnet_t(batch, predictions, device='cpu'):
+    t_predictions = predictions['t']
+    t_obs = batch[2].to(device)
+    criterion = nn.BCELoss()
+    return criterion(t_predictions, t_obs)
+
+
+def criterion_function_dragonnet_y(batch, predictions, device='cpu'):
+    y0_predictions, y1_predictions = predictions['y0'], predictions['y1']
+    y_obs = batch[1].to(device)
+    t_obs = batch[2].to(device)
+
+    criterion = nn.MSELoss()
+    loss_y0_batch = criterion(y0_predictions[t_obs == 0], y_obs[t_obs == 0])
+    loss_y1_batch = criterion(y1_predictions[t_obs == 1], y_obs[t_obs == 1])
+    return loss_y0_batch + loss_y1_batch
+
+
+def _calculate_criterion_dragonnet(criterion_function, batch, predictions, device='cpu'):
+    loss_t = criterion_function[0](
+        batch=batch,
+        predictions=predictions,
+        device=device)
+    loss_y = criterion_function[1](
+        batch=batch,
+        predictions=predictions,
+        device=device)
+    return loss_t, loss_y
+
+
+def _calculate_metric_dragonnet(metrics_functions, batch, predictions):
+    metrics_t = metrics_functions[0](batch=batch,
+                                     predictions=predictions)
+    metrics_y = metrics_functions[1](batch=batch,
+                                     predictions=predictions)
+    return metrics_t, metrics_y
+
+
+def fit_dragonnet(epochs,
+                  model,
+                  loader_train,
+                  optimizer,
+                  criterion,
+                  metrics_functions,
+                  use_validation,
+                  device,
+                  loader_val=None):
+    """
+        Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
+    :param epochs: integer
+    :param model: nn.Module
+    :param loader_train: DataLoader
+    :param optimizer: torch.optim
+    :param criterion: List of criterions
+    :param metrics_functions: List of metrics
+    :param use_validation: Bool
+    :param device: torch.device
+    :param loader_val: DataLoader (Optional)
+
+    :return: model: nn.Module after model.train() over all epochs
+    :return: loss: dictionary with all losses calculated
+    :return: metrics: disctionary with all metrics calcualted
+    """
+
+    logger.debug('...starting')
+
+    # use prefetch_generator and tqdm for iterating through data
+    # pbar = tqdm(enumerate(BackgroundGenerator(train_data_loader, ...)),
+    #            total=len(train_data_loader))
+    # start_time = time.time()
+
+    loss_train_t, metric_train_t = np.zeros(epochs), np.zeros(epochs)
+    loss_train_y, metric_train_y = np.zeros(epochs), np.zeros(epochs)
+
+    if use_validation:
+        loss_val_t, metric_val_t = np.zeros(epochs), np.zeros(epochs)
+        loss_val_y, metric_val_y = np.zeros(epochs), np.zeros(epochs)
+
+    for e in range(epochs):
+        # set model to train mode
+        model.train()
+
+        torch.cuda.empty_cache()
+        _metrics_t, _metrics_y = [], []
+        _loss_t, _loss_y = [], []
+        for i, batch in enumerate(loader_train):
+            optimizer.zero_grad()
+            predictions = model(batch[0].to(device))
+            loss_batch_t, loss_batch_y = _calculate_criterion_dragonnet(criterion_function=criterion,
+                                                                        batch=batch,
+                                                                        predictions=predictions,
+                                                                        device=device)
+
+            metrics_batch_t, metrics_batch_y = _calculate_metric_dragonnet(metrics_functions=metrics_functions,
+                                                                           batch=batch,
+                                                                           predictions=predictions)
+            loss_batch = loss_batch_t + loss_batch_y
+            loss_batch.backward()
+            optimizer.step()
+            _loss_t.append(loss_batch_t.cpu().detach().numpy())
+            _loss_y.append(loss_batch_y.cpu().detach().numpy())
+            _metrics_t.append(metrics_batch_t)
+            _metrics_y.append(metrics_batch_y)
+
+        loss_train_t[e] = np.mean(_loss_t)
+        loss_train_y[e] = np.mean(_loss_y)
+        metric_train_t[e] = np.mean(_metrics_t)
+        metric_train_y[e] = np.mean(_metrics_y)
+
+        if use_validation:
+
+            model.eval()
+            batch = next(iter(loader_val))
+            predictions = model(batch[0].to(device))
+
+            loss_val_t[e], loss_val_y[e] = _calculate_criterion_dragonnet(criterion_function=criterion,
+                                                                          batch=batch,
+                                                                          predictions=predictions,
+                                                                          device=device)
+            metric_val_t[e], metric_val_y[e] = _calculate_metric_dragonnet(metrics_functions=metrics_functions,
+                                                                           batch=batch,
+                                                                           predictions=predictions)
+        else:
+            loss_val_t[e], loss_val_y[e] = None, None
+            metric_val_t[e], metric_val_y[e] = None, None
+        # compute computation time and *compute_efficiency*
+        # process_time = start_time - time.time() - prepare_time
+        # pbar.set_description("Compute efficiency: {:.2f}, epoch: {}/{}:".format(
+        #    process_time / (process_time + prepare_time), epoch, opt.epochs))
+        # start_time = time.time()
+
+    loss = {'loss_train_t': loss_train_t,
+            'loss_val_t': loss_val_t,
+            'loss_train_y': loss_train_y,
+            'loss_val_y': loss_val_y
+            }
+    metrics = {'metric_train_t': metric_train_t,
+               'metric_val_t': metric_val_t,
+               'metric_train_y': metric_train_y,
+               'metric_val_y': metric_val_y
+               }
+
+    #thhold = find_optimal_cutoff_wrapper_t(loader_train=loader_train, model=model, device=device)
+    #metrics['thhold'] = thhold
+
+    return model, loss, metrics
