@@ -143,11 +143,6 @@ def fit_wrapper(params,
 
     logging.debug("...fitting done.")
 
-    # Organize output.
-    # metrics = {'metric_y_train': metric_y_train, 'metric_t_train': metric_t_train,
-    #           'metric_y_test': metric_y_test, 'metric_t_test': metric_t_test}
-    # losses = {'loss_y_train': loss_train_y, 'loss_t_train': loss_train_t}
-
     ate_estimated = {'ate_naive_train': ate_naive_train, 'ate_aipw_train': ate_aipw_train,
                      'ate_naive_test': ate_naive_test, 'ate_aipw_test': ate_aipw_test,
                      'ate_naive_all': ate_naive_all, 'ate_aipw_all': ate_aipw_all}

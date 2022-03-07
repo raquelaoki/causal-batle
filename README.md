@@ -11,15 +11,6 @@
 * transfer learning https://medium.com/georgian-impact-blog/transfer-learning-part-1-ed0c174ad6e7
 * drgonnet https://github.com/claudiashi57/dragonnet/blob/master/src/experiment/models.py
 
-## TODOS
-* Use checkpoints
-* TensorBoard
-* datasets
-* bayesian model: trick is on the sampler functions
-* can I use kaggle dataset for my own researach? 
-https://www.kaggle.com/andrewmvd/retinal-disease-classification
-  https://www.kaggle.com/c/diabetic-retinopathy-detection/discussion/139291
-  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2769884/
 
 ## Setup
 
@@ -78,11 +69,24 @@ Tensorboard
 %tensorboard --logdir logs
 ```
 
+## Usage
 
-### Logging 
+### Parameter creation
+The current implementation supports two approaches: 
+1) Reading from .yaml file (See examples in config/):
+```python
+params = hp.parameter_loader(config_path)
+```
 
-Reference: 
-https://www.machinelearningplus.com/python/python-logging-guide/
+2) Using a function that creates the dictionary:
+```python
+params=parameter_debug(data_name='ihdp',max_epochs=50, lr=0.1,batch_size=50, 
+                          units1=200,units2=100, weight_decay=0.05, use_validation=False,
+                          use_dropout=False,dropout_p=0.5, use_overlap_knob=False,
+                          seed=1, alpha=[1,1,0], config_name='config_test1', 
+                          use_tensorboard=True, model_name='dragonnet')
+```
+
 
 
 ### Baselines Instructions

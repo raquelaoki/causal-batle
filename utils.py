@@ -23,21 +23,8 @@ def make_data(params):
 
 
 def run_model(params):
+
     data_s, data_t, tau = make_data(params)
-
-    # Running liner model tau = m1() - m0()
-    x_train, t_train, y_train = data_t.x_train, data_t.t_train.reshape(-1), data_t.y_train
-    x_test, t_test, y_test = data_t.x_test, data_t.t_test.reshape(-1), data_t.y_test
-    x_train0, x_train1 = x_train[t_train == 0, :], x_train[t_train == 1, :]
-    y_train0, y_train1 = y_train[t_train == 0], y_train[t_train == 1]
-
-    m0 = sk.linear_model.LinearRegression().fit(x_train0, y_train0)
-    m1 = sk.linear_model.LinearRegression().fit(x_train1, y_train1)
-
-    pred0 = m0.predict(x_test)
-    pred1 = m1.predict(x_test)
-
-    small_test = {'pred0': pred0, 'obs': y_test, 't': t_test, 'pred1': pred1}
 
     if params['use_transfer']:
         tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader(batch=params['batch_size'],
@@ -51,51 +38,37 @@ def run_model(params):
                                                                               shuffle=params['shuffle'],
                                                                               seed=0
                                                                               )
+    if params['model_name'] != 'aipw':
+        metrics, loss, ate = hfit.fit_wrapper(params=params,
+                                              loader_train=tloader_train,
+                                              loader_test=tloader_test,
+                                              loader_all=tloader_all,
+                                              loader_val=tloader_val,
+                                              use_validation=params['use_validation'],
+                                              use_tensorboard=params['use_tensorboard'])
+    else:
+        print('in progress')
 
-    metrics, loss, ate = hfit.fit_wrapper(params=params,
-                                          loader_train=tloader_train,
-                                          loader_test=tloader_test,
-                                          loader_all=tloader_all,
-                                          loader_val=tloader_val,
-                                          use_validation=params['use_validation'],
-                                          use_tensorboard=params['use_tensorboard'])
 
-    return metrics, loss, ate, tau, small_test
+    return metrics, loss, ate, tau
 
 
-def run_methdos_(X_train, X_test, y_train, y_test, params):
-    # TODO : update run_methods
-    """Run all params['methods'] methods.
-    This function will run the methods and generate a pd.DataFrame with the results.
-    Args:
-        X_train: Features of training set.
-        X_test: Features of testing set.
-        y_train: Target of training set.
-        y_test: Target of testing set.
-        params: Dictionary with parameters.
-    Returns:
-        pd.Dataframe with the results.
-    """
-    output = pd.DataFrame(columns=['method', 'config',
-                                   'metric_train', 'metric_test'])
+def organize(params, ate, tau, table=pd.DataFrame()):
 
-    for method in params.get('methods', ['new_method']):
-        if method == 'new_method':
-            model = NewMethod()
-        elif method == 'baseline':
-            model = Baseline()
-        else:
-            raise ValueError(f"Method {method} not implemented.")
+    if table.empty:
+        table = pd.DataFrame(columns={'data_name', 'model_name', 'config','tau',
+                                      'ate_naive_train', 'ate_aipw_train',
+                                      'ate_naive_all', 'ate_aipw_all'})
 
-        model.fit(X_train, y_train)
-        y_train_pred = model.predict(X_train)
-        y_test_pred = model.predict(X_test)
-        out = {
-            'method': method,
-            'config': params.get('config', 'None'),
-            'metric_train': metric(y_train, y_train_pred),
-            'metric_test': metric(y_test, y_test_pred),
-        }
-        output = output.append(out, ignore_index=True)
-
-    return output
+    out = {
+        'model_name': params['model_name'],
+        'data_name': params['data_name'],
+        'config': params['config_name'],
+        'tau':tau,
+        'ate_naive_train': ate['ate_naive_train'],
+        'ate_aipw_train': ate['ate_aipw_train'],
+        'ate_naive_all': ate['ate_naive_all'],
+        'ate_aipw_all': ate['ate_aipw_all'],
+    }
+    table = table.append(out, ignore_index=True)
+    return table

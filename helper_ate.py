@@ -43,8 +43,8 @@ def calculate_ate(data_loader, model,
         y0_pred = y0_pred.detach().numpy().reshape(-1)
         y1_pred = y1_pred.detach().numpy().reshape(-1)
 
-    print('Sample of t_pred -',title,'  ', t_pred[0:5],t_obs[0:5])
-    print('Sample of y_pred -',title,'  ', y0_pred[0:5],y1_pred[0:5],y_obs[0:5])
+    #print('Sample of t_pred -',title,'  ', t_pred[0:5],t_obs[0:5])
+    #print('Sample of y_pred -',title,'  ', y0_pred[0:5],y1_pred[0:5],y_obs[0:5])
 
     if include_aipw:
         return _naive_ate(y0_pred, y1_pred, t_pred), _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred)
