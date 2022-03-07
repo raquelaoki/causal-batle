@@ -71,6 +71,13 @@ Local Machine
 ssh -L 8888:cdr767.int.cedar.computecanada.ca:8888 USER@cedar.computecanada.ca
 ```
 
+Tensorboard 
+```commandline
+# Load the TensorBoard notebook extension
+%load_ext tensorboard
+%tensorboard --logdir logs
+```
+
 
 ### Logging 
 
@@ -91,20 +98,12 @@ ucate:
 
 ### workflow 
 1) Fit dragonnet
-    * debug create_if_not_available in helper_param
-    * debug new implementation
-    * check implementation with IHDP: download and load from CompBioAndSimulated_Datasets
-    * target regularizer - test TargetedLoss
-    * Tensorboard https://github.com/BorealisAI/MMoEEx-MTL/blob/main/main.py 
-      https://colab.research.google.com/github/tensorflow/tensorboard/blob/master/docs/tensorboard_in_notebooks.ipynb#scrollTo=Cu1fbH-S3oAX
-    * save best epoch model
-    * save output for data + model   
-    * Improve parameter naming
-
+* double check losses from dragonnet 
+* save best epoch model
+* save output for data + model
+2) Add weights alpha
 3) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
 4) Wrapper to run dragonnet b times
-5) helper_parameters.py implement
-6) ??? implement IHDP to double check dragonnet MAE?   
 7) Fit gaussian-process dragonnet
 8) Fit causa-battle 
 9) Fit cevae

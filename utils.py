@@ -57,7 +57,8 @@ def run_model(params):
                                           loader_test=tloader_test,
                                           loader_all=tloader_all,
                                           loader_val=tloader_val,
-                                          use_validation=params['use_validation'])
+                                          use_validation=params['use_validation'],
+                                          use_tensorboard=params['use_tensorboard'])
 
     return metrics, loss, ate, tau, small_test
 

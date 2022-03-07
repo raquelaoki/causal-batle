@@ -4,7 +4,6 @@ import numpy as np
 import logging
 import torch.nn as nn
 import torch
-from torch.utils.tensorboard import SummaryWriter
 import helper_ate as ate
 import dragonnet
 
@@ -60,7 +59,8 @@ def make_model(params):
                                     units3=params['units3'],
                                     type_original=params['type_original'])
         criterion = [dragonnet.criterion_function_dragonnet_t,
-                     dragonnet.criterion_function_dragonnet_y]
+                     dragonnet.criterion_function_dragonnet_y,
+                     dragonnet.criterion_function_dragonnet_targeted]
         metric_functions = [dragonnet.metric_function_dragonnet_t,
                             dragonnet.metric_function_dragonnet_y]
         fit = dragonnet.fit_dragonnet
@@ -73,44 +73,9 @@ def make_model(params):
 def _calculate_criterion(criterion_function, batch, predictions, device='cpu', set='train'):
     return criterion_function(batch, predictions, device=device, set=set)
 
+
 def _calculate_metric(metric_function, batch, predictions):
     return metric_function(batch, predictions)
-
-
-# TODO: use
-class TensorboardWriter:
-    def __init__(self, path_logger, name_config):
-        date = self.get_date()
-        full_path = (
-                self.get_home_dir() + "/" + path_logger + date + "/" + name_config + "/"
-        )
-        print("Tensorboard folder path - {}".format(full_path))
-        self.writer = SummaryWriter(log_dir=full_path)
-
-    # Add day, month and year to path
-    def get_date(self):
-        now = datetime.now()  # Current date and time (Hour, minute)
-        date = now.strftime("%Y_%m_%d_%H_%M")
-        return date
-
-    def get_home_dir(self):
-        return os.getenv("HOME")
-
-    def add_scalar(self, name_metric, value_metric, epoch):
-        self.writer.add_scalar(name_metric, value_metric, epoch)
-
-    def end_writer(self):
-        # Make sure all pending events have been written to disk
-        self.writer.flush()
-
-
-def update_tensorboar(writer_tensorboard, values, e, set='train'):
-    names = ['loss_t_' + set, 'loss_y_' + set, 'f1_t_' + set, 'mse_y_' + set]
-    assert len(values) == len(names)
-    for i in range(len(names)):
-        writer_tensorboard.add_scalar(names[i], values[i], e)
-    writer_tensorboard.end_writer()
-    return writer_tensorboard
 
 
 def fit_wrapper(params,
@@ -129,7 +94,7 @@ def fit_wrapper(params,
         best_epoch = 0
 
     if use_tensorboard:
-        writer_tensorboard = TensorboardWriter(path_logger, config_name)
+        path_logger = params.get('path_tensorboard', 'logs')
 
     model, criterion, metric_functions, fit = make_model(params)
 
@@ -137,6 +102,7 @@ def fit_wrapper(params,
         model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=params['lr'], weight_decay=params['weight_decay'])
+    alpha = params['alpha']
 
     model, loss, metrics = fit(epochs=params['max_epochs'],
                                model=model,
@@ -145,17 +111,15 @@ def fit_wrapper(params,
                                criterion=criterion,
                                metrics_functions=metric_functions,
                                use_validation=use_validation,
+                               use_tensorboard=use_tensorboard,
                                device=device,
-                               loader_val=loader_val)
+                               loader_val=loader_val,
+                               alpha=alpha,
+                               path_logger=path_logger,
+                               config_name=params['config_name']
+                               )
     # Change model to eval mode
     model.eval()
-
-    if use_tensorboard:
-        values = [loss_train_t[e], loss_train_y[e], metrics_train_t[e], metrics_train_y[e]]
-        writer_tensorboard = update_tensorboar(writer_tensorboard, values, e, set='train')
-        if use_validation:
-            values = [loss_val_t[e], loss_val_y[e], metrics_val_t[e], metrics_val_y[e]]
-            writer_tensorboard = update_tensorboar(writer_tensorboard, values, e, set='val')
 
     # Metrics on testins set
     batch = next(iter(loader_test))
