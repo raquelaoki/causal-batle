@@ -98,16 +98,14 @@ ucate:
 
 ### workflow 
 1) Fit dragonnet
-* double check losses from dragonnet 
-* save best epoch model
-* save output for data + model
-2) Add weights alpha
-3) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
-4) Wrapper to run dragonnet b times
+* double check losses from dragonnet - here
+2) Fit X-learner, AIPW
+3) save best epoch model 
+4) save output for data + model
+5) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
+6) Wrapper to run dragonnet b times
 7) Fit gaussian-process dragonnet
 8) Fit causa-battle 
 9) Fit cevae
-10) Fit BART
-11) Fit X-learner, AIPW 
-12) Add new dataset (vision)
-13) Add another dataset
+11) Add new dataset (vision)
+12) Add another dataset
