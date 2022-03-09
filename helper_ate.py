@@ -6,19 +6,37 @@ import logging
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
-#logging.basicConfig(level=logging.DEBUG)
 
-def calculate_ate(data_loader, model,
-                  single_batch=False,
-                  include_aipw=True,
-                  title=''):
+
+def calculate_ate(loader_train, loader_test, loader_all, model, ate_method_list=['naive', 'ipw', 'aipw']):
+    ate_train = _per_set_ate(loader_train, model, single_batch=False,
+                             methods_list=ate_method_list, loader_name='train')
+    ate_test = _per_set_ate(loader_test, model, single_batch=True,
+                            methods_list=ate_method_list, loader_name='test')
+    ate_all = _per_set_ate(loader_all, model, single_batch=False,
+                           methods_list=ate_method_list, loader_name='all')
+
+    ate_estimated = {}
+    ate_estimated.update(ate_all)
+    ate_estimated.update(ate_train)
+    ate_estimated.update(ate_test)
+
+    return ate_estimated
+
+
+def _per_set_ate(data_loader,
+                 model,
+                 single_batch=False,
+                 methods_list=['naive'],
+                 loader_name='DEFAULT'):
     """
     Calculate the Average Treatment Effect
+    :param include_ipw:
     :param data_loader: if neural networks, needs to be a DataLoader objs
     :param model: object
     :param single_batch: False (all, train - contain several batches), True (val, test)
     :param include_aipw: if True, calculate naive and aipw. If False, only calculate naive.
-    :return:
+    :return:ate_naive_train
     """
     if not single_batch:
         y_obs, t_obs = np.array([]), np.array([])
@@ -32,7 +50,6 @@ def calculate_ate(data_loader, model,
             y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.detach().numpy().reshape(-1)], 0)
             y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.detach().numpy().reshape(-1)], 0)
             t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.detach().numpy().reshape(-1)], 0)
-
     else:
         batch = next(iter(data_loader))
         y_obs = batch[1].detach().numpy().reshape(-1)
@@ -43,25 +60,48 @@ def calculate_ate(data_loader, model,
         y0_pred = y0_pred.detach().numpy().reshape(-1)
         y1_pred = y1_pred.detach().numpy().reshape(-1)
 
-    #print('Sample of t_pred -',title,'  ', t_pred[0:5],t_obs[0:5])
-    #print('Sample of y_pred -',title,'  ', y0_pred[0:5],y1_pred[0:5],y_obs[0:5])
+    implemented_methods = {'naive': _naive_ate,
+                           'ipw': _ipw_ate,
+                           'aipw': _aipw_ate,
+                           }
+    estimated_ate = {}
+    for method in implemented_methods.keys():
+        _key = 'ate_' + method + '_' + loader_name
+        if method in methods_list:
+            estimated_ate[_key] = implemented_methods[method](t_obs, y_obs, y0_pred, y1_pred, t_pred)
+        else:
+            estimated_ate[_key] = None
 
-    if include_aipw:
-        return _naive_ate(y0_pred, y1_pred, t_pred), _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred)
-    else:
-        _naive_ate(y0_pred, y1_pred, t_pred), None
+    return estimated_ate
 
 
-def _naive_ate(y0_pred, y1_pred, t_pred):
+def _naive_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
     ite = (y1_pred - y0_pred)
     return np.mean(_truncate_by_g(attribute=ite, g=t_pred, level=0.05))
 
 
+def _ipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
+    y0_pred, y1_pred, t_pred, t_obs, y_obs = _truncate_all_by_g(y0_pred, y1_pred, t_pred, t_obs, y_obs)
+    ipw1 = y1_pred / t_pred
+    ipw0 = y0_pred / (1.0 - t_pred)
+
+    #print('predi', y1_pred[t_obs == 1], y0_pred[t_obs == 0])
+    #print('predi - t', np.mean(t_pred[t_obs == 1]), np.mean(t_pred[t_obs == 0]))
+    #print('predi - ipw', ipw1[t_obs == 1], ipw0[t_obs == 0])
+
+    ipw1 = np.mean(ipw1[t_obs==1])
+    ipw0 = np.mean(ipw0[t_obs==0])
+    #print('averages ',ipw1, ipw0)
+
+    return  ipw1-ipw0
+
+
 def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
     y0_pred, y1_pred, t_pred, t_obs, y_obs = _truncate_all_by_g(y0_pred, y1_pred, t_pred, t_obs, y_obs)
-    y_pred = y0_pred * (1 - t_obs) + y1_pred * t_obs
-    p_ = t_obs * (1.0 / t_pred) - (1.0 - t_obs) / (1.0 - t_pred)
-    ite = p_ * (y_obs - y_pred) + y1_pred - y0_pred
+    ite_dif = (y1_pred - y0_pred)
+    ite_prop1 = t_obs * (y_obs - y1_pred) / t_pred
+    ite_prop0 = (1 - t_obs) * (y_obs - y0_pred) / (1 - t_pred)
+    ite = ite_dif + ite_prop1 - ite_prop0
     return np.mean(ite)
 
 
@@ -86,5 +126,3 @@ def _truncate_all_by_g(y0_pred, y1_pred, t_pred, t_obs, y_obs, truncate_level=0.
     t_obs = _truncate_by_g(np.copy(t_obs), orig_t_pred, truncate_level)
     y_obs = _truncate_by_g(np.copy(y_obs), orig_t_pred, truncate_level)
     return y0_pred, y1_pred, t_pred, t_obs, y_obs
-
-

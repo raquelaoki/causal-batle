@@ -210,27 +210,29 @@ def _calculate_criterion_dragonnet(criterion_function, batch, predictions, devic
     return loss_t, loss_y, loss_target
 
 
-def _calculate_metric_dragonnet(metrics_functions, batch, predictions):
-    metrics_t = metrics_functions[0](batch=batch,
-                                     predictions=predictions)
-    metrics_y = metrics_functions[1](batch=batch,
-                                     predictions=predictions)
+def _calculate_metric_dragonnet(metric_functions, batch, predictions):
+    metrics_t = metric_functions[0](batch=batch,
+                                    predictions=predictions)
+    metrics_y = metric_functions[1](batch=batch,
+                                    predictions=predictions)
     return metrics_t, metrics_y
 
 
 def fit_dragonnet(epochs,
                   model,
                   loader_train,
+                  loader_test,
                   optimizer,
                   criterion,
-                  metrics_functions,
+                  metric_functions,
                   use_validation,
                   use_tensorboard,
                   device,
                   loader_val=None,
                   alpha=[],
                   path_logger='',
-                  config_name=''):
+                  config_name='',
+                  home_dir=''):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
     :param epochs: integer
@@ -257,7 +259,9 @@ def fit_dragonnet(epochs,
     # start_time = time.time()
 
     if use_tensorboard:
-        writer_tensorboard = ht.TensorboardWriter(path_logger, config_name)
+        writer_tensorboard = ht.TensorboardWriter(path_logger=path_logger,
+                                                  config_name=config_name,
+                                                  home_dir=home_dir)
 
     if len(alpha) == 0:
         alpha = torch.ones(len(criterion))
@@ -270,7 +274,7 @@ def fit_dragonnet(epochs,
     loss_val_t, metric_val_t = np.zeros(epochs), np.zeros(epochs)
     loss_val_y, metric_val_y = np.zeros(epochs), np.zeros(epochs)
 
-    #Targeted losses
+    # Targeted losses.
     loss_train_ty, loss_val_ty = np.zeros(epochs), np.zeros(epochs)
 
     for e in range(epochs):
@@ -284,15 +288,15 @@ def fit_dragonnet(epochs,
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
             loss_batch_t, loss_batch_y, loss_batch_tar = _calculate_criterion_dragonnet(criterion_function=criterion,
-                                                           batch=batch,
-                                                           predictions=predictions,
-                                                           device=device)
+                                                                                        batch=batch,
+                                                                                        predictions=predictions,
+                                                                                        device=device)
 
-            metrics_batch_t, metrics_batch_y = _calculate_metric_dragonnet(metrics_functions=metrics_functions,
+            metrics_batch_t, metrics_batch_y = _calculate_metric_dragonnet(metric_functions=metric_functions,
                                                                            batch=batch,
                                                                            predictions=predictions)
 
-            loss_batch = alpha[0]*loss_batch_t+alpha[1]*loss_batch_y+alpha[2]*loss_batch_tar
+            loss_batch = alpha[0] * loss_batch_t + alpha[1] * loss_batch_y + alpha[2] * loss_batch_tar
 
             loss_batch.backward()
             optimizer.step()
@@ -308,46 +312,59 @@ def fit_dragonnet(epochs,
         metric_train_t[e] = np.mean(_metrics_t)
         metric_train_y[e] = np.mean(_metrics_y)
 
-
         if use_validation:
             model.eval()
             batch = next(iter(loader_val))
             predictions = model(batch[0].to(device))
 
             loss_val_t[e], loss_val_y[e], loss_val_ty[e] = _calculate_criterion_dragonnet(criterion_function=criterion,
-                                                                          batch=batch,
-                                                                          predictions=predictions,
-                                                                          device=device)
-            metric_val_t[e], metric_val_y[e] = _calculate_metric_dragonnet(metrics_functions=metrics_functions,
+                                                                                          batch=batch,
+                                                                                          predictions=predictions,
+                                                                                          device=device)
+            metric_val_t[e], metric_val_y[e] = _calculate_metric_dragonnet(metric_functions=metric_functions,
                                                                            batch=batch,
                                                                            predictions=predictions)
         else:
-            loss_val_t[e], loss_val_y[e] , loss_val_ty[e] = None, None, None
+            loss_val_t[e], loss_val_y[e], loss_val_ty[e] = None, None, None
             metric_val_t[e], metric_val_y[e] = None, None
 
         if use_tensorboard:
-            values = [loss_train_t[e], loss_train_y[e], loss_train_ty[e],
-                      metric_train_t[e], metric_train_y[e]]
+            values = {'loss_train_t':loss_train_t[e], 'loss_train_y':loss_train_y[e],
+                      'loss_train_ty':loss_train_ty[e], 'metric_train_t':metric_train_t[e],
+                      'metric_train_y':metric_train_y[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='train')
-            values = [loss_val_t[e], loss_val_y[e],loss_val_ty[e],
-                      metric_val_t[e], metric_val_y[e]]
+            values = {'loss_val_t':loss_val_t[e], 'loss_val_y':loss_val_y[e], 'loss_val_ty':loss_val_ty[e],
+                      'metric_val_t':metric_val_t[e], 'metric_val_y':metric_val_y[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
 
+    # Change model to eval mode
+    model.eval()
+
+    # Metrics on testins set
+    batch = next(iter(loader_test))
+    predictions = model(batch[0].to(device))
+    metric_test_t, metric_test_y = _calculate_metric_dragonnet(metric_functions=metric_functions,
+                                                               batch=batch,
+                                                               predictions=predictions,
+                                                               )
 
     loss = {'loss_train_t': loss_train_t,
             'loss_val_t': loss_val_t,
             'loss_train_y': loss_train_y,
             'loss_val_y': loss_val_y,
-            'loss_val_ty':loss_val_ty,
-            'loss_train_ty':loss_train_ty
+            'loss_val_ty': loss_val_ty,
+            'loss_train_ty': loss_train_ty,
             }
     metrics = {'metric_train_t': metric_train_t,
                'metric_val_t': metric_val_t,
                'metric_train_y': metric_train_y,
-               'metric_val_y': metric_val_y
+               'metric_val_y': metric_val_y,
+               'metric_test_t': metric_test_t,
+               'metric_test_y': metric_test_y
                }
 
     # thhold = find_optimal_cutoff_wrapper_t(loader_train=loader_train, model=model, device=device)
     # metrics['thhold'] = thhold
+    model.eval()
 
     return model, loss, metrics

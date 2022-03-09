@@ -6,9 +6,19 @@ Check the consistency of the parameters and complete some missing fields based o
 import logging
 import pandas as pd
 import yaml
+import os
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+
+def _running_on_colab():
+    try:
+        __IPYTHON__
+        _in_ipython_session = True
+    except NameError:
+        _in_ipython_session = False
+    return _in_ipython_session
 
 
 def create_if_not_available(parameters, default_keys):
@@ -26,7 +36,7 @@ def parameter_loader(config_path=""):
 
 
 def _check_params_consistency(params):
-    valid_model_names = ['dragonnet']
+    valid_model_names = ['dragonnet', 'aipw']
     valid_data_names = ['ihdp', 'gwas']
 
     assert 'data_name' in params, 'data_name missing!'
@@ -36,26 +46,10 @@ def _check_params_consistency(params):
 
     # Adding default values
     params['repetitions'] = params.get('repetitions', 10)
+    params['ate_method_list'] = params.get('ate_method_list', ['naive', 'ipw'])
 
     assert params['data_name'] in valid_data_names, 'data_name not implemented!'
     assert params['model_name'] in valid_model_names, 'model_name not implemented!'
-
-    if params['model_name'] == 'dragonnet':
-        params['max_epochs'] = params.get('max_epochs', 50)
-        params['batch_size'] = params.get('batch_size', 50)
-        params['units1'] = params.get('units1', 200)
-        params['units2'] = params.get('units2', 100)
-        params['units3'] = params.get('units3', 1)
-        params['lr'] = params.get('lr', 200)
-        params['weight_decay'] = params.get('weight_decay', 100)
-        params['dropout_p'] = params.get('dropout_p', 0.5)
-        params['alpha'] = params.get('alpha', [1, 1, 0])
-        params['use_validation'] = params.get('use_validation', False)
-        params['use_dropout'] = params.get('use_dropout', False)
-        params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_transfer'] = params.get('use_transfer', False)
-        params['shuffle'] = params.get('shuffle', False)
-        params['type_original'] = params.get('type_original', True)
 
     if params['data_name'] == 'gwas':
         params['n_sample'] = params.get('n_sample', 5000)
@@ -66,8 +60,47 @@ def _check_params_consistency(params):
         params['overlap_knob'] = params.get('overlap_knob', 1)
     elif params['data_name'] == 'ihdp':
         assert 1 <= params['seed'] <= 10, 'Seed out of range (1-10)'
-        params['n_covariates']= params.get('n_covariates', 25)
-        params['n_sample']= params.get('n_sample', 747)
+        params['n_covariates'] = params.get('n_covariates', 25)
+        params['n_sample'] = params.get('n_sample', 747)
+    else:
+        logger.debug('%s not implemented', params['data_name'])
+
+    if params['model_name'] == 'dragonnet':
+        params['max_epochs'] = params.get('max_epochs', 50)
+        params['batch_size'] = params.get('batch_size', 50)
+        params['units1'] = params.get('units1', 200)
+        params['units2'] = params.get('units2', 100)
+        params['units3'] = params.get('units3', 1)
+        params['lr'] = params.get('lr', 0.01)
+        params['weight_decay'] = params.get('weight_decay', 0.05)
+        params['dropout_p'] = params.get('dropout_p', 0.5)
+        params['alpha'] = params.get('alpha', [1, 1, 0])
+        params['use_validation'] = params.get('use_validation', False)
+        params['use_dropout'] = params.get('use_dropout', False)
+        params['use_tensorboard'] = params.get('use_tensorboard', True)
+        params['use_transfer'] = params.get('use_transfer', False)
+        params['shuffle'] = params.get('shuffle', False)
+        params['type_original'] = params.get('type_original', True)
+    elif params['model_name'] == 'aipw':
+        assert 'n_covariates' in params, 'n_covariates missing'
+        params['max_epochs'] = params.get('max_epochs', 50)
+        params['batch_size'] = params.get('batch_size', 50)
+        params['lr'] = params.get('lr', 0.01)
+        params['weight_decay'] = params.get('weight_decay', 0.05)
+        params['use_validation'] = params.get('use_validation', False)
+        params['use_tensorboard'] = params.get('use_tensorboard', True)
+        params['use_transfer'] = params.get('use_transfer', False)
+        params['shuffle'] = params.get('shuffle', False)
+        params['alpha'] = params.get('alpha', [1, 1, 1])
+
+    else:
+        logger.debug('%s not implemented', params['model_name'])
+
+    # Tensorflow root path:
+    if _running_on_colab:
+        params['home_dir'] = '/content'
+    else:
+        params['home_dir'] = os.getenv("HOME")
 
     return params
 
@@ -76,10 +109,11 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                     batch_size=200, lr=0.01, weight_decay=0.01, units1=100, units2=50, units3=1,
                     n_sample=5000, n_covariates=1000, use_validation=False, use_tensorboard=False,
                     use_dropout=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1,
-                    seed=1, alpha=[1, 1, 1], config_name='configA'):
+                    seed=1, alpha=[1, 1, 1], config_name='configA', ate_method_list=['naive']):
     params = {'data_name': data_name, 'model_name': model_name,
               'seed': seed, 'config_name': config_name,
-              'use_tensorboard': use_tensorboard}
+              'use_tensorboard': use_tensorboard,
+              'ate_method_list':ate_method_list}
 
     if params['data_name'] == 'gwas':
         params = _make_parameters_data_gwas(params=params,

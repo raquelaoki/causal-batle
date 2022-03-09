@@ -5,12 +5,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class TensorboardWriter:
-    def __init__(self, path_logger, name_config):
+    def __init__(self, path_logger, config_name, home_dir='/content'):
         date = self.get_date()
-        #home_dir = os.getenv("HOME")
-        home_dir = '/content'
-        full_path = home_dir + "/" + path_logger + "/" + date + "/" + name_config + "/"
+        full_path = home_dir + "/" + path_logger + "/" + config_name + "/" + date + "/"
         logger.debug('Tensorboard folder path - %s', full_path)
         self.writer = SummaryWriter(log_dir=full_path)
 
@@ -29,10 +28,7 @@ class TensorboardWriter:
 
 
 def update_tensorboar(writer_tensorboard, values, e, set='train'):
-    names = ['loss_t_' + set, 'loss_y_' + set, 'loss_ty_' + set,
-             'roc_t_' + set, 'mse_y_' + set]
-    assert len(values) == len(names)
-    for i in range(len(names)):
-        writer_tensorboard.add_scalar(names[i], values[i], e)
+    for key in values.keys():
+        writer_tensorboard.add_scalar(key, values[key], e)
     writer_tensorboard.end_writer()
     return writer_tensorboard

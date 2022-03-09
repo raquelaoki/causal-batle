@@ -68,7 +68,7 @@ class DataTarget:
 
 
 def make_DataSouce(data_x, data_t, data_y, seed=1, source_size=0.2, use_validation=False):
-    s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed, test_size=source_size)
+    s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed*10, test_size=source_size)
     data_s = DataSource(s_x)
     data_t = DataTarget(x=t_x,
                         t=t_t,

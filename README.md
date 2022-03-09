@@ -101,15 +101,18 @@ ucate:
 * combine all the csvs
 
 ### workflow 
-1) Fit dragonnet
-* double check losses from dragonnet - here
-2) Fit X-learner, AIPW
-3) save best epoch model 
-4) save output for data + model
-5) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
-6) Wrapper to run dragonnet b times
-7) Fit gaussian-process dragonnet
-8) Fit causa-battle 
-9) Fit cevae
+1) AIPW
+   * l0 should be updated only for t==0
+   * l1 should be updated only for t==1
+2) Fit dragonnet
+   * double check losses from dragonnet - here
+3) Fit X-learner, 
+4) save best epoch model 
+5) save output for data + model
+6) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
+7) Wrapper to run dragonnet b times
+8) Fit gaussian-process dragonnet
+9) Fit causa-battle 
+10) Fit cevae
 11) Add new dataset (vision)
 12) Add another dataset
