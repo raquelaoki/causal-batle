@@ -1,8 +1,7 @@
 import pandas as pd
 import logging
 import helper_fit as hfit
-import data_preprocessing as dp
-import data_preprocessing as dp
+import helper_data as hd
 from dragonnet import dragonnet
 
 # temp
@@ -16,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 def make_data(params):
     if params['data_name'] == 'gwas':
-        data_s, data_t, tau = dp.make_gwas(params)
+        data_s, data_t, tau = hd.make_gwas(params)
         return data_s, data_t, tau
     elif params['data_name'] == 'ihdp':
         # data_s, data_t, tau = dp.make_ihdp(params)
-        return dp.make_ihdp(params)
+        return hd.make_ihdp(params)
 
 
 def run_model(params):

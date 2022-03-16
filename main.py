@@ -11,7 +11,7 @@ import pandas as pd
 import sys
 import utils
 import yaml
-from data_preprocessing import make_dataset
+from helper_data import make_dataset
 import logging
 
 
@@ -21,6 +21,7 @@ def main(config_path):
     Args:
         config_path: path for the config files.
     """
+    device = torch.device("cuda" if next(model.parameters()).is_cuda else "cpu")
 
     logging.basicConfig(filename='myapp.log', level=logging.INFO)
     logging.info('Started')

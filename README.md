@@ -100,19 +100,25 @@ ucate:
 * there are Methods = [method1, ..., methodn]
 * combine all the csvs
 
-### workflow 
-1) AIPW
-   * l0 should be updated only for t==0
-   * l1 should be updated only for t==1
-2) Fit dragonnet
+### workflow
+1) Fit dragonnet
    * double check losses from dragonnet - here
-3) Fit X-learner, 
-4) save best epoch model 
-5) save output for data + model
-6) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
-7) Wrapper to run dragonnet b times
-8) Fit gaussian-process dragonnet
-9) Fit causa-battle 
-10) Fit cevae
+2) Bayesian Dragonnet 
+   * degub with type_original=False
+     * what is my output? 
+     * losses are now -log_prob?
+     * metrics 
+   * check here for bayesian layers https://github.com/anndvision/quince/blob/main/quince/library/modules/variational.py
+   * train step https://github.com/anndvision/quince/blob/c816df02e0f02172e2a0999068e6953052fba1e7/quince/library/models/dragonnet.py 
+   * Do UCATE use KL for dragonnet?
+https://github.com/OATML/ucate/blob/main/ucate/library/models/tarnet.py
+https://github.com/OATML/ucate/blob/main/ucate/library/modules/samplers.py
+3) save best epoch model 
+4) save output for data + model
+5) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
+6) Wrapper to run dragonnet b times
+8) Fit causa-battle 
+9) Fit cevae 
+10) Fit X-learner,
 11) Add new dataset (vision)
 12) Add another dataset

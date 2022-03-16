@@ -6,36 +6,29 @@ https://github.com/raquelaoki/M3E2/blob/main/resources/dragonnet.py
 Alternative implementation of the Dragonnet model: A neural network to estimate treatment effects.
 Adopting pytorch
 """
+import keras.backend as K
+import logging
 import numpy as np
 import pandas as pd
-import keras.backend as K
+import tensorflow as tf
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torch.distributions.one_hot_categorical import OneHotCategorical
 
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
 
-import tensorflow as tf
+# Local imports
 import utils
-
 import helper_tensorboard as ht
-
-
-# from semi_parametric_estimation.ate import psi_naive, psi_tmle_cont_outcome
-# Do I use this functions above? https://github.com/raquelaoki/M3E2/tree/main/resources/semi_parametric_estimation
-#
-# from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_curve, mean_squared_error
-import logging
+import bayesian_layers as bl
 
 logger = logging.getLogger(__name__)
-
-
-# logging.basicConfig(level=logging.DEBUG)
 
 
 class dragonnet(nn.Module):
@@ -52,9 +45,11 @@ class dragonnet(nn.Module):
 
         self.type_original = type_original
         if self.type_original:
-            self.dragonnet_head = dragonnet_original(self.units1, self.units2, self.units3)
+            self.dragonnet_head = dragonnet_head(self.units1, self.units2, self.units3,
+                                                 use_dropout=use_dropout,dropout_p=dropout_p)
         else:
-            logging.debug("Gaussian Process not implemented yet.")
+            self.dragonnet_head = dragonnet_head(self.units1, self.units2, self.units3,
+                                                 use_dropout=use_dropout,dropout_p=dropout_p, bayesian=True)
         # Activation functions.
         self.elu = nn.ELU()
         self.sigmoid = nn.Sigmoid()
@@ -85,37 +80,44 @@ class dragonnet(nn.Module):
         return self.dragonnet_head(self.batchnorm(self.dropout(x)))
 
 
-class dragonnet_original(nn.Module):
+class dragonnet_head(nn.Module):
     """ Dragonnet Original Head.
     """
 
-    def __init__(self, units1=200, units2=100, units3=1, use_dropout=False, dropout_p=0):
-        super(dragonnet_original, self).__init__()
+    def __init__(self, units1=200, units2=100, units3=1, use_dropout=False, dropout_p=0, bayesian=False):
+        super(dragonnet_head, self).__init__()
         self.units1 = units1
         self.units2 = units2
         self.units3 = units3
         self.use_dropout = use_dropout
         self.dropout_p = dropout_p
-
+        self.bayesian = bayesian
         self.head_layer2_1_0 = nn.Linear(in_features=self.units1, out_features=self.units2)
         self.head_layer2_2_0 = nn.Linear(in_features=self.units2, out_features=self.units2)
-        self.outcome_layer_0 = nn.Linear(in_features=self.units2, out_features=self.units3)
 
         self.head_layer2_1_1 = nn.Linear(in_features=self.units1, out_features=self.units2)
         self.head_layer2_2_1 = nn.Linear(in_features=self.units2, out_features=self.units2)
-        self.outcome_layer_1 = nn.Linear(in_features=self.units2, out_features=self.units3)
-
-        self.t_predictions = nn.Linear(in_features=self.units1, out_features=1)
 
         # Activation functions.
         self.elu = nn.ELU(alpha=0.25)
-        self.sigmoid = nn.Sigmoid()
         self.tahn = nn.Tanh()
 
         if self.use_dropout:
             self.dropout = nn.Dropout(p=self.dropout_p)
         else:
             self.dropout = nn.Dropout(p=0)
+
+        if self.bayesian:
+            # Returns outcome density
+            self.outcome_layer_0 = bl.Normal(in_features=self.units2, out_features=self.units3)
+            self.outcome_layer_1 = bl.Normal(in_features=self.units2, out_features=self.units3)
+            self.t_predictions = bl.Categorical(in_features=self.units2, out_features=self.units3)
+            self.sigmoid = nn.Identity()
+        else:
+            self.outcome_layer_0 = nn.Linear(in_features=self.units2, out_features=self.units3)
+            self.outcome_layer_1 = nn.Linear(in_features=self.units2, out_features=self.units3)
+            self.t_predictions = nn.Linear(in_features=self.units1, out_features=1)
+            self.sigmoid = nn.Sigmoid()
 
     def forward(self, inputs):
         # Treatment specific - first layer.
@@ -131,28 +133,12 @@ class dragonnet_original(nn.Module):
         y1_predictions = self.outcome_layer_1(y1_hidden)
 
         t_predictions = self.sigmoid(self.t_predictions(inputs))
+
         predictions = {'y0': y0_predictions,
                        'y1': y1_predictions,
                        't': t_predictions}
 
         return predictions
-
-
-class TargetedLoss(nn.Module):
-
-    def __init__(self):
-        super(TargetedLoss, self).__init__()
-
-    def forward(self, y_obs, y_pred, t_obs, t_pred, epislon=0.1):
-        t1 = torch.div(t_obs,
-                       torch.add(t_pred, 0.01))
-        t0 = torch.div(torch.sub(t_obs, -1),
-                       torch.add(torch.sub(t_pred, -1), 0.01))
-        t = torch.mul(torch.sub(t1, t0), epislon)
-
-        loss = torch.add(y_pred, t)
-        loss = torch.sub(y_obs, loss)
-        return torch.mean(loss)
 
 
 def metric_function_dragonnet_t(batch, predictions):
@@ -172,6 +158,23 @@ def criterion_function_dragonnet_targeted(batch, predictions, device='cpu'):
     y_pred = y0_predictions * (1 - t_obs) + y1_predictions * t_obs
     criterion = TargetedLoss()
     return criterion(y_obs=y_obs, y_pred=y_pred, t_obs=t_obs, t_pred=t_predictions)
+
+
+class TargetedLoss(nn.Module):
+
+    def __init__(self):
+        super(TargetedLoss, self).__init__()
+
+    def forward(self, y_obs, y_pred, t_obs, t_pred, epislon=0.1):
+        t1 = torch.div(t_obs,
+                       torch.add(t_pred, 0.01))
+        t0 = torch.div(torch.sub(t_obs, -1),
+                       torch.add(torch.sub(t_pred, -1), 0.01))
+        t = torch.mul(torch.sub(t1, t0), epislon)
+
+        loss = torch.add(y_pred, t)
+        loss = torch.sub(y_obs, loss)
+        return torch.mean(loss)
 
 
 def criterion_function_dragonnet_t(batch, predictions, device='cpu'):
@@ -235,6 +238,12 @@ def fit_dragonnet(epochs,
                   home_dir=''):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
+    :param home_dir:
+    :param config_name:
+    :param path_logger:
+    :param metric_functions:
+    :param use_tensorboard:
+    :param loader_test:
     :param epochs: integer
     :param model: nn.Module
     :param loader_train: DataLoader
