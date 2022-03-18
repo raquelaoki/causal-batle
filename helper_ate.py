@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_ate(loader_train, loader_test, loader_all, model, ate_method_list=['naive', 'ipw', 'aipw']):
-    ate_train = _per_set_ate(loader_train, model, single_batch=False,
+    ate_train = _per_set_ate(loader_train, model, make_predictions=pred_several_batches,
                              methods_list=ate_method_list, loader_name='train')
-    ate_test = _per_set_ate(loader_test, model, single_batch=True,
+    ate_test = _per_set_ate(loader_test, model, make_predictions=pred_single_batch,
                             methods_list=ate_method_list, loader_name='test')
-    ate_all = _per_set_ate(loader_all, model, single_batch=False,
+    ate_all = _per_set_ate(loader_all, model, make_predictions=pred_several_batches,
                            methods_list=ate_method_list, loader_name='all')
 
     ate_estimated = {}
@@ -24,9 +24,77 @@ def calculate_ate(loader_train, loader_test, loader_all, model, ate_method_list=
     return ate_estimated
 
 
+def calculate_ate_bayesian(loader_train, loader_test, loader_all, model, ate_method_list=['naive', 'ipw', 'aipw']):
+    ate_train = _per_set_ate(loader_train, model, make_predictions=pred_several_batches_b,
+                             methods_list=ate_method_list, loader_name='train')
+    ate_test = _per_set_ate(loader_test, model, make_predictions=pred_single_batch_b,
+                            methods_list=ate_method_list, loader_name='test')
+    ate_all = _per_set_ate(loader_all, model, make_predictions=pred_several_batches_b,
+                           methods_list=ate_method_list, loader_name='all')
+
+    ate_estimated = {}
+    ate_estimated.update(ate_all)
+    ate_estimated.update(ate_train)
+    ate_estimated.update(ate_test)
+
+    return ate_estimated
+
+
+def pred_several_batches(data_loader, model):
+    y_obs, t_obs = np.array([]), np.array([])
+    y0_pred, y1_pred, t_pred = np.array([]), np.array([]), np.array([])
+
+    for i, batch in enumerate(data_loader):
+        y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
+        t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
+        predictions = model(batch[0])
+        t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
+        y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.detach().numpy().reshape(-1)], 0)
+        y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.detach().numpy().reshape(-1)], 0)
+        t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.detach().numpy().reshape(-1)], 0)
+    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+
+
+def pred_several_batches_b(data_loader, model):
+    y_obs, t_obs = np.array([]), np.array([])
+    y0_pred, y1_pred, t_pred = np.array([]), np.array([]), np.array([])
+
+    for i, batch in enumerate(data_loader):
+        y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
+        t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
+        predictions = model(batch[0])
+        t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
+        y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.mean.detach().numpy().reshape(-1)], 0)
+        y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.mean.detach().numpy().reshape(-1)], 0)
+        t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.mean.detach().numpy().reshape(-1)], 0)
+    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+
+def pred_single_batch(data_loader, model):
+    batch = next(iter(data_loader))
+    y_obs = batch[1].detach().numpy().reshape(-1)
+    t_obs = batch[2].detach().numpy().reshape(-1)
+    predictions = model(inputs=batch[0])
+    t_pred, y0_pred, y1_pred = predictions['t'], predictions['y0'], predictions['y1']
+    t_pred = t_pred.detach().numpy().reshape(-1)
+    y0_pred = y0_pred.detach().numpy().reshape(-1)
+    y1_pred = y1_pred.detach().numpy().reshape(-1)
+    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+
+def pred_single_batch_b(data_loader, model):
+    batch = next(iter(data_loader))
+    y_obs = batch[1].detach().numpy().reshape(-1)
+    t_obs = batch[2].detach().numpy().reshape(-1)
+    predictions = model(inputs=batch[0])
+    t_pred, y0_pred, y1_pred = predictions['t'], predictions['y0'], predictions['y1']
+    t_pred = t_pred.mean.detach().numpy().reshape(-1)
+    y0_pred = y0_pred.mean.detach().numpy().reshape(-1)
+    y1_pred = y1_pred.mean.detach().numpy().reshape(-1)
+    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+
+
 def _per_set_ate(data_loader,
                  model,
-                 single_batch=False,
+                 make_predictions,
                  methods_list=['naive'],
                  loader_name='DEFAULT'):
     """
@@ -38,27 +106,8 @@ def _per_set_ate(data_loader,
     :param include_aipw: if True, calculate naive and aipw. If False, only calculate naive.
     :return:ate_naive_train
     """
-    if not single_batch:
-        y_obs, t_obs = np.array([]), np.array([])
-        y0_pred, y1_pred, t_pred = np.array([]), np.array([]), np.array([])
 
-        for i, batch in enumerate(data_loader):
-            y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
-            t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
-            predictions = model(batch[0])
-            t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
-            y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.detach().numpy().reshape(-1)], 0)
-            y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.detach().numpy().reshape(-1)], 0)
-            t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.detach().numpy().reshape(-1)], 0)
-    else:
-        batch = next(iter(data_loader))
-        y_obs = batch[1].detach().numpy().reshape(-1)
-        t_obs = batch[2].detach().numpy().reshape(-1)
-        predictions = model(inputs=batch[0])
-        t_pred, y0_pred, y1_pred = predictions['t'], predictions['y0'], predictions['y1']
-        t_pred = t_pred.detach().numpy().reshape(-1)
-        y0_pred = y0_pred.detach().numpy().reshape(-1)
-        y1_pred = y1_pred.detach().numpy().reshape(-1)
+    t_pred, y0_pred, y1_pred, t_obs, y_obs = make_predictions(data_loader, model)
 
     implemented_methods = {'naive': _naive_ate,
                            'ipw': _ipw_ate,

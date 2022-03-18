@@ -8,6 +8,7 @@ import torch
 import dragonnet
 import aipw
 import helper_ate as ha
+import bayesian_layers as bl
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -22,7 +23,8 @@ def make_model(params):
     """
     logger.debug('Model - %s', params['model_name'])
     if params['model_name'] == 'dragonnet':
-        model = dragonnet.dragonnet(n_covariates=params['n_covariates'], units1=params['units1'],
+        model = dragonnet.dragonnet(n_covariates=params['n_covariates'],
+                                    units1=params['units1'],
                                     units2=params['units2'],
                                     units3=params['units3'],
                                     type_original=params['type_original'])
@@ -33,6 +35,22 @@ def make_model(params):
                             dragonnet.metric_function_dragonnet_y]
         fit = dragonnet.fit_dragonnet
         ate = ha.calculate_ate
+    elif params['model_name'] == 'bdragonnet':
+        model = dragonnet.dragonnet(n_covariates=params['n_covariates'],
+                                    units1=params['units1'],
+                                    units2=params['units2'],
+                                    units3=params['units3'],
+                                    type_original=params['type_original'],
+                                    use_dropout=params['use_dropout'],
+                                    dropout_p=params['dropout_p']
+                                    )
+        criterion = [bl.criterion_function_dragonnet_t,
+                     bl.criterion_function_dragonnet_y]
+        metric_functions = [bl.metric_function_dragonnet_t,
+                            bl.metric_function_dragonnet_y]
+        fit = dragonnet.fit_dragonnet
+        ate = ha.calculate_ate_bayesian
+
     elif params['model_name'] == 'aipw':
         model = aipw.aipw(n_covariates=params['n_covariates'])
         criterion = [aipw.criterion_function_aipw_t,
@@ -42,7 +60,6 @@ def make_model(params):
                             aipw.metric_function_aipw_y,
                             aipw.metric_function_aipw_t]
         fit = aipw.fit_aipw
-        #fit = aipw.fit_aipw_three_opt
         ate = ha.calculate_ate
     else:
         logger.warning('%s not implemented', params['model_name'])
@@ -83,7 +100,11 @@ def fit_wrapper(params,
     if torch.cuda.is_available():
         model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=params['lr'], weight_decay=params['weight_decay'])
+    optimizer = torch.optim.Adam(model.parameters(),
+                                 lr=params['lr'],
+                                 weight_decay=params['weight_decay']
+                                 #weight_decay=(0.5 * (1 - 0.5)) / 200
+                                 )
     alpha = params['alpha']
 
     model, loss, metrics = fit(epochs=params['max_epochs'],

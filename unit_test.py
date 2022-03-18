@@ -28,6 +28,16 @@ class DataPrep(unittest.TestCase):
         metrics, loss, ate, tau = run_model(params)
         self.assertFalse(math.isnan(ate['ate_aipw_train']), 'IHDP+AIPW failed.')
 
+    def test_ihdp_bdragonnet(self):
+        logger.debug('Test: IHDP and Bayesian Dragonnet')
+        params = parameter_debug(
+            data_name='ihdp', model_name='bdragonnet', use_validation=True,
+            use_tensorboard=False, max_epochs=2, ate_method_list=['naive','ipw','aipw'],
+            config_name='unit_test'
+        )
+        metrics, loss, ate, tau = run_model(params)
+        self.assertFalse(math.isnan(ate['ate_aipw_train']), 'IHDP+AIPW failed.')
+
 
 if __name__ == '__main__':
     unittest.main()

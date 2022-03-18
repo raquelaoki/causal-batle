@@ -46,10 +46,10 @@ class dragonnet(nn.Module):
         self.type_original = type_original
         if self.type_original:
             self.dragonnet_head = dragonnet_head(self.units1, self.units2, self.units3,
-                                                 use_dropout=use_dropout,dropout_p=dropout_p)
+                                                 use_dropout=use_dropout, dropout_p=dropout_p)
         else:
             self.dragonnet_head = dragonnet_head(self.units1, self.units2, self.units3,
-                                                 use_dropout=use_dropout,dropout_p=dropout_p, bayesian=True)
+                                                 use_dropout=use_dropout, dropout_p=dropout_p, bayesian=True)
         # Activation functions.
         self.elu = nn.ELU()
         self.sigmoid = nn.Sigmoid()
@@ -111,7 +111,7 @@ class dragonnet_head(nn.Module):
             # Returns outcome density
             self.outcome_layer_0 = bl.Normal(in_features=self.units2, out_features=self.units3)
             self.outcome_layer_1 = bl.Normal(in_features=self.units2, out_features=self.units3)
-            self.t_predictions = bl.Categorical(in_features=self.units2, out_features=self.units3)
+            self.t_predictions = bl.Categorical(in_features=self.units1, out_features=self.units3)
             self.sigmoid = nn.Identity()
         else:
             self.outcome_layer_0 = nn.Linear(in_features=self.units2, out_features=self.units3)
@@ -146,7 +146,8 @@ def metric_function_dragonnet_t(batch, predictions):
 
 
 def metric_function_dragonnet_y(batch, predictions):
-    y_pred = predictions['y0'] * (1 - predictions['t']) + predictions['y1'] * predictions['t']
+    t_obs = batch[2]
+    y_pred = predictions['y0'] * (1 - t_obs) + predictions['y1'] * t_obs
     return mean_squared_error(batch[1], y_pred.detach().numpy())
 
 
@@ -195,7 +196,7 @@ def criterion_function_dragonnet_y(batch, predictions, device='cpu'):
     return loss_y0_batch + loss_y1_batch
 
 
-def _calculate_criterion_dragonnet(criterion_function, batch, predictions, device='cpu'):
+def _calculate_criterion_dragonnet(criterion_function, batch, predictions, device='cpu', alpha=[1, 1, 0]):
     loss_t = criterion_function[0](
         batch=batch,
         predictions=predictions,
@@ -204,13 +205,19 @@ def _calculate_criterion_dragonnet(criterion_function, batch, predictions, devic
         batch=batch,
         predictions=predictions,
         device=device)
-    loss_target = criterion_function[2](
-        batch=batch,
-        predictions=predictions,
-        device=device
-    )
+
+    if alpha[-1] == 0:
+        loss_target = torch.tensor([0]).to(device)
+    else:
+        loss_target = criterion_function[2](
+            batch=batch,
+            predictions=predictions,
+            device=device
+        )
 
     return loss_t, loss_y, loss_target
+    # for criterion in criterion_function:
+    #    yield criterion(batch=batch, predictions=predictions, device=device)
 
 
 def _calculate_metric_dragonnet(metric_functions, batch, predictions):
@@ -262,6 +269,9 @@ def fit_dragonnet(epochs,
 
     logger.debug('...starting')
 
+    if alpha[-1] != 0:
+        tarnet_criterion = criterion_function_dragonnet_targeted
+
     # use prefetch_generator and tqdm for iterating through data
     # pbar = tqdm(enumerate(BackgroundGenerator(train_data_loader, ...)),
     #            total=len(train_data_loader))
@@ -287,6 +297,7 @@ def fit_dragonnet(epochs,
     loss_train_ty, loss_val_ty = np.zeros(epochs), np.zeros(epochs)
 
     for e in range(epochs):
+
         # set model to train mode
         model.train()
 
@@ -294,24 +305,25 @@ def fit_dragonnet(epochs,
         _metrics_t, _metrics_y = [], []
         _loss_t, _loss_y, _loss_ty = [], [], []
         for i, batch in enumerate(loader_train):
+            # print('batch',batch[1].shape)
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
             loss_batch_t, loss_batch_y, loss_batch_tar = _calculate_criterion_dragonnet(criterion_function=criterion,
                                                                                         batch=batch,
                                                                                         predictions=predictions,
-                                                                                        device=device)
+                                                                                        device=device,
+                                                                                        alpha=alpha)
 
-            metrics_batch_t, metrics_batch_y = _calculate_metric_dragonnet(metric_functions=metric_functions,
-                                                                           batch=batch,
-                                                                           predictions=predictions)
-
+            # Calculate tarnet loss
             loss_batch = alpha[0] * loss_batch_t + alpha[1] * loss_batch_y + alpha[2] * loss_batch_tar
-
             loss_batch.backward()
             optimizer.step()
             _loss_t.append(loss_batch_t.cpu().detach().numpy())
             _loss_y.append(loss_batch_y.cpu().detach().numpy())
             _loss_ty.append(loss_batch_tar.cpu().detach().numpy())
+            metrics_batch_t, metrics_batch_y = _calculate_metric_dragonnet(metric_functions=metric_functions,
+                                                                           batch=batch,
+                                                                           predictions=predictions)
             _metrics_t.append(metrics_batch_t)
             _metrics_y.append(metrics_batch_y)
 
@@ -320,7 +332,7 @@ def fit_dragonnet(epochs,
         loss_train_ty[e] = np.mean(_loss_ty)
         metric_train_t[e] = np.mean(_metrics_t)
         metric_train_y[e] = np.mean(_metrics_y)
-
+        #print('epoch', e, loss_train_t[e], loss_train_y[e])
         if use_validation:
             model.eval()
             batch = next(iter(loader_val))
@@ -330,6 +342,11 @@ def fit_dragonnet(epochs,
                                                                                           batch=batch,
                                                                                           predictions=predictions,
                                                                                           device=device)
+            if alpha[0] != 0:
+                loss_val_ty[e] = tarnet_criterion(batch=batch, predictions=predictions, device=device)
+            else:
+                loss_val_ty[e] = 0
+
             metric_val_t[e], metric_val_y[e] = _calculate_metric_dragonnet(metric_functions=metric_functions,
                                                                            batch=batch,
                                                                            predictions=predictions)
@@ -338,12 +355,12 @@ def fit_dragonnet(epochs,
             metric_val_t[e], metric_val_y[e] = None, None
 
         if use_tensorboard:
-            values = {'loss_train_t':loss_train_t[e], 'loss_train_y':loss_train_y[e],
-                      'loss_train_ty':loss_train_ty[e], 'metric_train_t':metric_train_t[e],
-                      'metric_train_y':metric_train_y[e]}
+            values = {'loss_train_t': loss_train_t[e], 'loss_train_y': loss_train_y[e],
+                      'loss_train_ty': loss_train_ty[e], 'metric_train_t': metric_train_t[e],
+                      'metric_train_y': metric_train_y[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='train')
-            values = {'loss_val_t':loss_val_t[e], 'loss_val_y':loss_val_y[e], 'loss_val_ty':loss_val_ty[e],
-                      'metric_val_t':metric_val_t[e], 'metric_val_y':metric_val_y[e]}
+            values = {'loss_val_t': loss_val_t[e], 'loss_val_y': loss_val_y[e], 'loss_val_ty': loss_val_ty[e],
+                      'metric_val_t': metric_val_t[e], 'metric_val_y': metric_val_y[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
 
     # Change model to eval mode

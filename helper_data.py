@@ -122,7 +122,7 @@ def make_gwas(params, unit_test=False):
                                     seed=seed,
                                     source_size=0.2,
                                     use_validation=params['use_validation'])
-    return data_s, data_t, tau  # treatment_effects[treatment_columns]
+    return data_s, data_t, tau[0]  # treatment_effects[treatment_columns]
 
 
 def make_ihdp(params):

@@ -104,13 +104,10 @@ ucate:
 1) Fit dragonnet
    * double check losses from dragonnet - here
 2) Bayesian Dragonnet 
-   * degub with type_original=False
-     * what is my output? 
-     * losses are now -log_prob?
-     * metrics 
-   * check here for bayesian layers https://github.com/anndvision/quince/blob/main/quince/library/modules/variational.py
-   * train step https://github.com/anndvision/quince/blob/c816df02e0f02172e2a0999068e6953052fba1e7/quince/library/models/dragonnet.py 
-   * Do UCATE use KL for dragonnet?
+   * metrics 
+3) AIPW 
+   * gwas version is not good
+   * improve parameters?
 https://github.com/OATML/ucate/blob/main/ucate/library/models/tarnet.py
 https://github.com/OATML/ucate/blob/main/ucate/library/modules/samplers.py
 3) save best epoch model 

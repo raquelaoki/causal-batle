@@ -36,7 +36,7 @@ def parameter_loader(config_path=""):
 
 
 def _check_params_consistency(params):
-    valid_model_names = ['dragonnet', 'aipw']
+    valid_model_names = ['dragonnet', 'aipw','bdragonnet']
     valid_data_names = ['ihdp', 'gwas']
 
     assert 'data_name' in params, 'data_name missing!'
@@ -81,6 +81,22 @@ def _check_params_consistency(params):
         params['use_transfer'] = params.get('use_transfer', False)
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', True)
+    elif params['model_name'] == 'bdragonnet':
+        params['max_epochs'] = params.get('max_epochs', 50)
+        params['batch_size'] = params.get('batch_size', 50)
+        params['units1'] = params.get('units1', 200)
+        params['units2'] = params.get('units2', 100)
+        params['units3'] = params.get('units3', 1)
+        params['lr'] = params.get('lr', 0.01)
+        params['weight_decay'] = params.get('weight_decay', 0.05)
+        params['dropout_p'] = params.get('dropout_p', 0.5)
+        params['alpha'] = params.get('alpha', [1, 1, 0])
+        params['use_validation'] = params.get('use_validation', False)
+        params['use_dropout'] = params.get('use_dropout', True)
+        params['use_tensorboard'] = params.get('use_tensorboard', True)
+        params['use_transfer'] = params.get('use_transfer', False)
+        params['shuffle'] = params.get('shuffle', False)
+        params['type_original'] = params.get('type_original', False)
     elif params['model_name'] == 'aipw':
         assert 'n_covariates' in params, 'n_covariates missing'
         params['max_epochs'] = params.get('max_epochs', 50)
