@@ -78,7 +78,7 @@ def _check_params_consistency(params):
         params['use_validation'] = params.get('use_validation', False)
         params['use_dropout'] = params.get('use_dropout', False)
         params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_transfer'] = params.get('use_transfer', False)
+        params['use_source'] = params.get('use_source', False)
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', True)
     elif params['model_name'] == 'bdragonnet':
@@ -94,7 +94,7 @@ def _check_params_consistency(params):
         params['use_validation'] = params.get('use_validation', False)
         params['use_dropout'] = params.get('use_dropout', True)
         params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_transfer'] = params.get('use_transfer', False)
+        params['use_source'] = params.get('use_source', False)
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', False)
     elif params['model_name'] == 'aipw':
@@ -105,7 +105,7 @@ def _check_params_consistency(params):
         params['weight_decay'] = params.get('weight_decay', 0.05)
         params['use_validation'] = params.get('use_validation', False)
         params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_transfer'] = params.get('use_transfer', False)
+        params['use_source'] = params.get('use_source', False)
         params['shuffle'] = params.get('shuffle', False)
         params['alpha'] = params.get('alpha', [1, 1, 1])
 
@@ -205,7 +205,7 @@ def _make_parameters_model_dragonnet(params,
                                      use_dropout=False,
                                      dropout_p=0,
                                      alpha=[1, 1, 1]):
-    params['use_transfer'] = False
+    params['use_source'] = False
     params['shuffle'] = True
     params['batch_size'] = batch_size
     params['max_epochs'] = max_epochs

@@ -15,28 +15,20 @@ logger = logging.getLogger(__name__)
 
 def make_data(params):
     if params['data_name'] == 'gwas':
-        data_s, data_t, tau = hd.make_gwas(params)
-        return data_s, data_t, tau
+        data, tau = hd.make_gwas(params)
+        return data, tau
     elif params['data_name'] == 'ihdp':
         # data_s, data_t, tau = dp.make_ihdp(params)
         return hd.make_ihdp(params)
 
 
 def run_model(params):
-    data_s, data_t, tau = make_data(params)
+    data, tau = make_data(params)
 
-    if params['use_transfer']:
-        tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader(batch=params['batch_size'],
-                                                                              shuffle=params['shuffle'],
-                                                                              seed=0)
-        sloader_train, sloader_val, sloader_test, sloader_all = data_s.loader(batch=params['batch_size'],
-                                                                              shuffle=params['shuffle'],
-                                                                              seed=0)
-    else:
-        tloader_train, tloader_val, tloader_test, tloader_all = data_t.loader(batch=params['batch_size'],
-                                                                              shuffle=params['shuffle'],
-                                                                              seed=0
-                                                                              )
+    tloader_train, tloader_val, tloader_test, tloader_all = data.loader(batch=params['batch_size'],
+                                                                          shuffle=params['shuffle'],
+                                                                          seed=0
+                                                                          )
     #
     metrics, loss, ate = hfit.fit_wrapper(params=params,
                                           loader_train=tloader_train,

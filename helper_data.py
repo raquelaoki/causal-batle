@@ -19,9 +19,58 @@ logger = logging.getLogger(__name__)
 # logging.basicConfig(level=logging.DEBUG)
 
 
-class DataSource:
-    def __init__(self, x):
-        self.x = x
+class DataTargetAndSource:
+    def __init__(self, x, t, y, d, test_size=0.33, seed=0, use_validation=False):
+        self.use_validation = use_validation
+        x_train, x_test, y_train, y_test, t_train, t_test, d_train, d_test = train_test_split(x, y, t, d,
+                                                                                              test_size=test_size,
+                                                                                              random_state=seed)
+        if self.use_validation:
+            x_train, x_val, y_train, y_val, t_train, t_val, d_train, d_val = train_test_split(x_train, y_train, t_train,
+                                                                                              test_size=test_size / 2,
+                                                                                              random_state=seed)
+            self.x_val = x_val.values
+            self.y_val = y_val.reshape(-1, 1)
+            self.t_val = t_val.reshape(-1, 1)
+            self.d_val = d_val.reshape(-1, 1)
+
+        self.x_train = x_train.values
+        self.y_train = y_train.reshape(-1, 1)
+        self.t_train = t_train.reshape(-1, 1)
+        self.d_train = d_train.reshape(-1, 1)
+
+        self.x_test = x_test.values
+        self.y_test = y_test.reshape(-1, 1)
+        self.t_test = t_test.reshape(-1, 1)
+        self.d_test = d_test.reshape(-1, 1)
+
+        self.x = x.values
+        self.t = t.reshape(-1, 1)
+        self.y = y.reshape(-1, 1)
+        self.d = d.reshape(-1, 1)
+
+    def loader(self, shuffle=True, batch=32, seed=0):
+        # Creating TensorDataset to use in the DataLoader.
+        dataset_train = TensorDataset(Tensor(self.x_train), Tensor(self.y_train),
+                                      Tensor(self.t_train), Tensor(self.d_train))
+        dataset_test = TensorDataset(Tensor(self.x_test), Tensor(self.y_test),
+                                     Tensor(self.t_test), Tensor(self.d_test))
+        dataset_all = TensorDataset(Tensor(self.x), Tensor(self.y),
+                                    Tensor(self.t), Tensor(self.d))
+
+        # Required: Create DataLoader for training the models.
+        loader_train = DataLoader(dataset_train, shuffle=shuffle, batch_size=batch)
+        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=self.x_test.shape[0])
+        loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
+
+        if self.use_validation:
+            dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val),
+                                        Tensor(self.t_val), Tensor(self.d_val))
+            loader_val = DataLoader(dataset_val, shuffle=shuffle, batch_size=self.x_val.shape[0])
+        else:
+            loader_val = None
+
+        return loader_train, loader_val, loader_test, loader_all
 
 
 class DataTarget:
@@ -30,10 +79,11 @@ class DataTarget:
         self.use_validation = use_validation
 
         x_train, x_test, y_train, y_test, t_train, t_test = train_test_split(x, y, t,
-                                                                             test_size=0.33, random_state=seed)
-        if use_validation:
+                                                                             test_size=test_size, random_state=seed)
+        if self.use_validation:
             x_train, x_val, y_train, y_val, t_train, t_val = train_test_split(x_train, y_train, t_train,
-                                                                              test_size=0.15, random_state=seed)
+                                                                              test_size=test_size / 2,
+                                                                              random_state=seed)
             self.x_val = x_val.values
             self.y_val = y_val.reshape(-1, 1)
             self.t_val = t_val.reshape(-1, 1)
@@ -67,15 +117,40 @@ class DataTarget:
         return loader_train, loader_val, loader_test, loader_all
 
 
-def make_DataSouce(data_x, data_t, data_y, seed=1, source_size=0.2, use_validation=False):
-    s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed*10, test_size=source_size)
-    data_s = DataSource(s_x)
-    data_t = DataTarget(x=t_x,
-                        t=t_t,
-                        y=t_y,
-                        use_validation=use_validation)
-    logging.debug('Dataset Prep Complete')
-    return data_s, data_t
+def make_Data(data_x, data_t, data_y, data_x_source=None,
+              seed=1, source_size=0.2, test_size=0.33,
+              use_validation=False, use_source=False):
+    if use_source:
+        if data_x_source:
+            s_x = data_x_source
+            t_x, t_y, t_t = data_x, data_y, data_t
+        else:
+            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed * 10,
+                                                        test_size=source_size)
+
+        x = np.concatenate([s_x, t_x], axis=0)
+        print('Checking shapes x', s_x.shape, t_x.shape, x.shape)
+        n_source = s_x.shape[0]
+        t = np.concatenate([np.zeros(n_source), t_t], axis=0)
+        print('Checking shapes t', n_source, len(t_t), len(t))
+        y = np.concatenate([np.zeros(n_source), t_y], axis=0)
+        print('Checking shapes y', n_source, len(t_y), len(y))
+        n_target = t_x.shape[0]
+        d = np.concatenate([np.ones(n_source), np.zeros(n_target)], axis=0)
+        print('Checking shapes d', n_source, n_target, len(d))
+
+        data = DataTargetAndSource(x=x,
+                                   t=t,
+                                   y=y,
+                                   d=d,
+                                   use_validation=use_validation,
+                                   test_size=test_size)
+    else:
+        s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed * 10,
+                                                    test_size=source_size)
+        data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size)
+    logging.debug('Dataset New Class Complete')
+    return data
 
 
 def make_gwas(params, unit_test=False):
@@ -116,13 +191,13 @@ def make_gwas(params, unit_test=False):
         data_t = np.array(data_t)
 
     data_t = data_t.reshape(-1)
-    data_s, data_t = make_DataSouce(data_x=data_x,
-                                    data_y=data_y,
-                                    data_t=data_t,
-                                    seed=seed,
-                                    source_size=0.2,
-                                    use_validation=params['use_validation'])
-    return data_s, data_t, tau[0]  # treatment_effects[treatment_columns]
+    data = make_Data(data_x=data_x,
+                     data_y=data_y,
+                     data_t=data_t,
+                     seed=seed,
+                     source_size=0.2,
+                     use_validation=params['use_validation'])
+    return data, tau[0]  # treatment_effects[treatment_columns]
 
 
 def make_ihdp(params):
@@ -131,11 +206,11 @@ def make_ihdp(params):
     data_setting = bcdata.ihdp_data(path='/content/data/ihdp/', id=seed)
     data_x, data_y, data_t, tau = data_setting.generate_samples()
 
-    data_s, data_t = make_DataSouce(data_x=data_x,
-                                    data_y=data_y,
-                                    data_t=data_t,
-                                    seed=seed,
-                                    source_size=0.2,
-                                    use_validation=params['use_validation'])
+    data = make_Data(data_x=data_x,
+                     data_y=data_y,
+                     data_t=data_t,
+                     seed=seed,
+                     source_size=0.2,
+                     use_validation=params['use_validation'])
 
-    return data_s, data_t, tau
+    return data, tau
