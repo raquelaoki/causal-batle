@@ -26,25 +26,26 @@ class DataTargetAndSource:
                                                                                               test_size=test_size,
                                                                                               random_state=seed)
         if self.use_validation:
-            x_train, x_val, y_train, y_val, t_train, t_val, d_train, d_val = train_test_split(x_train, y_train, t_train,
+            x_train, x_val, y_train, y_val, t_train, t_val, d_train, d_val = train_test_split(x_train, y_train,
+                                                                                              t_train, d_train,
                                                                                               test_size=test_size / 2,
                                                                                               random_state=seed)
-            self.x_val = x_val.values
+            self.x_val = x_val
             self.y_val = y_val.reshape(-1, 1)
             self.t_val = t_val.reshape(-1, 1)
             self.d_val = d_val.reshape(-1, 1)
 
-        self.x_train = x_train.values
+        self.x_train = x_train
         self.y_train = y_train.reshape(-1, 1)
         self.t_train = t_train.reshape(-1, 1)
         self.d_train = d_train.reshape(-1, 1)
 
-        self.x_test = x_test.values
+        self.x_test = x_test
         self.y_test = y_test.reshape(-1, 1)
         self.t_test = t_test.reshape(-1, 1)
         self.d_test = d_test.reshape(-1, 1)
 
-        self.x = x.values
+        self.x = x
         self.t = t.reshape(-1, 1)
         self.y = y.reshape(-1, 1)
         self.d = d.reshape(-1, 1)
@@ -84,16 +85,16 @@ class DataTarget:
             x_train, x_val, y_train, y_val, t_train, t_val = train_test_split(x_train, y_train, t_train,
                                                                               test_size=test_size / 2,
                                                                               random_state=seed)
-            self.x_val = x_val.values
+            self.x_val = x_val
             self.y_val = y_val.reshape(-1, 1)
             self.t_val = t_val.reshape(-1, 1)
-        self.x_train = x_train.values
+        self.x_train = x_train
         self.y_train = y_train.reshape(-1, 1)
         self.t_train = t_train.reshape(-1, 1)
-        self.x_test = x_test.values
+        self.x_test = x_test
         self.y_test = y_test.reshape(-1, 1)
         self.t_test = t_test.reshape(-1, 1)
-        self.x = x.values
+        self.x = x
         self.t = t.reshape(-1, 1)
         self.y = y.reshape(-1, 1)
 
@@ -121,6 +122,8 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
               seed=1, source_size=0.2, test_size=0.33,
               use_validation=False, use_source=False):
     if use_source:
+        logger.debug('... combining source and target domains data.')
+
         if data_x_source:
             s_x = data_x_source
             t_x, t_y, t_t = data_x, data_y, data_t
@@ -128,16 +131,13 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
             s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed * 10,
                                                         test_size=source_size)
 
-        x = np.concatenate([s_x, t_x], axis=0)
-        print('Checking shapes x', s_x.shape, t_x.shape, x.shape)
         n_source = s_x.shape[0]
-        t = np.concatenate([np.zeros(n_source), t_t], axis=0)
-        print('Checking shapes t', n_source, len(t_t), len(t))
-        y = np.concatenate([np.zeros(n_source), t_y], axis=0)
-        print('Checking shapes y', n_source, len(t_y), len(y))
         n_target = t_x.shape[0]
+
+        x = np.concatenate([s_x, t_x], axis=0)
+        t = np.concatenate([np.zeros(n_source), t_t], axis=0)
+        y = np.concatenate([np.zeros(n_source), t_y], axis=0)
         d = np.concatenate([np.ones(n_source), np.zeros(n_target)], axis=0)
-        print('Checking shapes d', n_source, n_target, len(d))
 
         data = DataTargetAndSource(x=x,
                                    t=t,
@@ -146,10 +146,12 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
                                    use_validation=use_validation,
                                    test_size=test_size)
     else:
+        logger.debug('... using only target domain data.')
+
         s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed * 10,
                                                     test_size=source_size)
+        t_x = t_x.values
         data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size)
-    logging.debug('Dataset New Class Complete')
     return data
 
 
@@ -196,7 +198,8 @@ def make_gwas(params, unit_test=False):
                      data_t=data_t,
                      seed=seed,
                      source_size=0.2,
-                     use_validation=params['use_validation'])
+                     use_validation=params['use_validation'],
+                     use_source=params['use_source'])
     return data, tau[0]  # treatment_effects[treatment_columns]
 
 
@@ -211,6 +214,7 @@ def make_ihdp(params):
                      data_t=data_t,
                      seed=seed,
                      source_size=0.2,
-                     use_validation=params['use_validation'])
+                     use_validation=params['use_validation'],
+                     use_source=params['use_source'])
 
     return data, tau

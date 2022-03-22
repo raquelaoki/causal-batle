@@ -26,10 +26,10 @@ def run_model(params):
     data, tau = make_data(params)
 
     tloader_train, tloader_val, tloader_test, tloader_all = data.loader(batch=params['batch_size'],
-                                                                          shuffle=params['shuffle'],
-                                                                          seed=0
-                                                                          )
-    #
+                                                                        shuffle=params['shuffle'],
+                                                                        seed=0
+                                                                        )
+    print('Done data')
     metrics, loss, ate = hfit.fit_wrapper(params=params,
                                           loader_train=tloader_train,
                                           loader_test=tloader_test,

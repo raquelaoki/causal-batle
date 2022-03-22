@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 def _running_on_colab():
+    """
+    Function to automatically find where the code is running.
+    Use to determine the Tensorboard log path.
+
+    :return: Bool, True is running on colab
+    """
     try:
         __IPYTHON__
         _in_ipython_session = True
@@ -22,12 +28,23 @@ def _running_on_colab():
 
 
 def create_if_not_available(parameters, default_keys):
+    """ Create default value for keys not in parameters.
+    Used by unit_test.py.
+    :param parameters: dictionary
+    :param default_keys: dictianary
+    :return: dictionary with all required keys and default values (if not originally present)
+    """
     for key in default_keys:
         parameters[key] = parameters.get(key, default_keys[key])
     return parameters
 
 
 def parameter_loader(config_path=""):
+    """ Load parameters from yaml file in config_path.
+
+    :param config_path: path
+    :return: Dictionary with parameters
+    """
     with open(config_path) as f:
         config = yaml.safe_load(f)
     params = config['parameters']
@@ -36,7 +53,14 @@ def parameter_loader(config_path=""):
 
 
 def _check_params_consistency(params):
-    valid_model_names = ['dragonnet', 'aipw','bdragonnet']
+    """ Check parameters consistency.
+    This function makes a several tests to make sure the paratemeters are consistent.
+    This function also adds keys/values default values if these are required and missing.
+
+    :param params: dictionary with parameters
+    :return: dictionary with parameters after consistency tests.
+    """
+    valid_model_names = ['dragonnet', 'aipw', 'bdragonnet', 'batle']
     valid_data_names = ['ihdp', 'gwas']
 
     assert 'data_name' in params, 'data_name missing!'
@@ -108,7 +132,22 @@ def _check_params_consistency(params):
         params['use_source'] = params.get('use_source', False)
         params['shuffle'] = params.get('shuffle', False)
         params['alpha'] = params.get('alpha', [1, 1, 1])
-
+    elif params['model_name'] == 'batle':
+        params['max_epochs'] = params.get('max_epochs', 50)
+        params['batch_size'] = params.get('batch_size', 50)
+        params['units1'] = params.get('units1', 200)
+        params['units2'] = params.get('units2', 100)
+        params['units3'] = params.get('units3', 1)
+        params['lr'] = params.get('lr', 0.01)
+        params['weight_decay'] = params.get('weight_decay', 0.05)
+        params['dropout_p'] = params.get('dropout_p', 0.5)
+        params['alpha'] = params.get('alpha', [1, 1, 0])
+        params['use_validation'] = params.get('use_validation', True)
+        params['use_dropout'] = params.get('use_dropout', True)
+        params['use_tensorboard'] = params.get('use_tensorboard', True)
+        params['use_source'] = params.get('use_source', True) # Adding source
+        params['shuffle'] = params.get('shuffle', False)
+        params['type_original'] = params.get('type_original', False)
     else:
         logger.debug('%s not implemented', params['model_name'])
 
@@ -126,10 +165,14 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                     n_sample=5000, n_covariates=1000, use_validation=False, use_tensorboard=False,
                     use_dropout=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1,
                     seed=1, alpha=[1, 1, 1], config_name='configA', ate_method_list=['naive']):
+    """
+    Function for testing, creates params dictionary withouh the yaml files.
+    """
+
     params = {'data_name': data_name, 'model_name': model_name,
               'seed': seed, 'config_name': config_name,
               'use_tensorboard': use_tensorboard,
-              'ate_method_list':ate_method_list}
+              'ate_method_list': ate_method_list}
 
     if params['data_name'] == 'gwas':
         params = _make_parameters_data_gwas(params=params,
@@ -146,7 +189,6 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
     else:
         logger.debug('...data not implemented')
 
-    # print('update here',params)
     if params['model_name'] == 'dragonnet':
         params = _make_parameters_model_dragonnet(params, max_epochs=max_epochs,
                                                   batch_size=batch_size, lr=lr,
@@ -154,7 +196,8 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                                                   units3=units3, use_validation=use_validation,
                                                   use_dropout=use_dropout, dropout_p=dropout_p,
                                                   alpha=alpha)
-
+    else:
+        logger.debug('... model option not available in parameter_debug()')
     params = _check_params_consistency(params)
     return params
 
