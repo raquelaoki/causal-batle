@@ -1,14 +1,15 @@
 import pandas as pd
 import numpy as np
-# from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
 import logging
 import torch.nn as nn
 import torch
 
-import dragonnet
+# Local
 import aipw
-import helper_ate as ha
 import bayesian_layers as bl
+import dragonnet
+import causal_batle as cb
+import helper_ate as ha
 
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -61,6 +62,23 @@ def make_model(params):
                             aipw.metric_function_aipw_t]
         fit = aipw.fit_aipw
         ate = ha.calculate_ate
+    elif params['model_name'] == 'batle':
+        model = cb.causal_batle(n_covariates=params['n_covariates'],
+                                units1=params['units1'],
+                                units2=params['units2'],
+                                units3=params['units3'],
+                                dropout_p=params['dropout_p'])
+        criterion = [cb.criterion_function_t,
+                     cb.criterion_function_y,
+                     cb.criterion_function_discriminator,
+                     cb.criterion_function_reconstruction]  # Missing adversarial
+        metric_functions = [bl.metric_function_dragonnet_t,
+                            bl.metric_function_dragonnet_y,
+                            cb.metric_function_discriminator,
+                            cb.metric_function_reconstruction]
+        fit = cb.fit_causal_batle
+        ate = ha.calculate_ate_bayesian
+        logger.debug('Implementation in progress')
     else:
         logger.warning('%s not implemented', params['model_name'])
     logger.debug('...model constructed')
@@ -81,6 +99,7 @@ def fit_wrapper(params,
                 use_tensorboard=False,
                 use_validation=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     np.random.seed(params['seed'])
 
     logger.debug("...fitting %s", params['model_name'])
@@ -103,7 +122,7 @@ def fit_wrapper(params,
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=params['lr'],
                                  weight_decay=params['weight_decay']
-                                 #weight_decay=(0.5 * (1 - 0.5)) / 200
+                                 # weight_decay=(0.5 * (1 - 0.5)) / 200
                                  )
     alpha = params['alpha']
 

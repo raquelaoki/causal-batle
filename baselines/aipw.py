@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import keras.backend as K
+import tensorflow as tf
 
 import torch
 import torch.nn as nn
@@ -12,12 +13,11 @@ from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
 
-import tensorflow as tf
-import utils
-
-import helper_tensorboard as ht
-
 import logging
+
+# Local Imports
+import utils
+import helper_tensorboard as ht
 
 logger = logging.getLogger(__name__)
 

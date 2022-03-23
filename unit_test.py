@@ -1,3 +1,11 @@
+""" Unit tests.
+
+1. Gwas + Dragonnet, check if final ate is Nan
+2. IHDP + AIPW, check if final ate is Nan
+3. IHDP and Bayesian Dragonnet, check if final ate is Nan
+4. GWAS + Causal-Batle, check if final ate is Nan (also combine source and target domains).
+"""
+
 import helper_data as dp
 from helper_parameters import parameter_debug
 import unittest

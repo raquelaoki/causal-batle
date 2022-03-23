@@ -297,7 +297,6 @@ def fit_dragonnet(epochs,
     loss_train_ty, loss_val_ty = np.zeros(epochs), np.zeros(epochs)
 
     for e in range(epochs):
-
         # set model to train mode
         model.train()
 
@@ -342,7 +341,7 @@ def fit_dragonnet(epochs,
                                                                                           batch=batch,
                                                                                           predictions=predictions,
                                                                                           device=device)
-            if alpha[0] != 0:
+            if alpha[-1] != 0:
                 loss_val_ty[e] = tarnet_criterion(batch=batch, predictions=predictions, device=device)
             else:
                 loss_val_ty[e] = 0

@@ -50,7 +50,7 @@ class DataTargetAndSource:
         self.y = y.reshape(-1, 1)
         self.d = d.reshape(-1, 1)
 
-    def loader(self, shuffle=True, batch=32, seed=0):
+    def loader(self, batch=32, seed=0):
         # Creating TensorDataset to use in the DataLoader.
         dataset_train = TensorDataset(Tensor(self.x_train), Tensor(self.y_train),
                                       Tensor(self.t_train), Tensor(self.d_train))
@@ -60,14 +60,14 @@ class DataTargetAndSource:
                                     Tensor(self.t), Tensor(self.d))
 
         # Required: Create DataLoader for training the models.
-        loader_train = DataLoader(dataset_train, shuffle=shuffle, batch_size=batch)
+        loader_train = DataLoader(dataset_train, shuffle=True, batch_size=batch)
         loader_test = DataLoader(dataset_test, shuffle=False, batch_size=self.x_test.shape[0])
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
 
         if self.use_validation:
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val),
                                         Tensor(self.t_val), Tensor(self.d_val))
-            loader_val = DataLoader(dataset_val, shuffle=shuffle, batch_size=self.x_val.shape[0])
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=self.x_val.shape[0])
         else:
             loader_val = None
 
@@ -98,20 +98,20 @@ class DataTarget:
         self.t = t.reshape(-1, 1)
         self.y = y.reshape(-1, 1)
 
-    def loader(self, shuffle=True, batch=32, seed=0):
+    def loader(self, batch=32, seed=0):
         # Creating TensorDataset to use in the DataLoader.
         dataset_train = TensorDataset(Tensor(self.x_train), Tensor(self.y_train), Tensor(self.t_train))
         dataset_test = TensorDataset(Tensor(self.x_test), Tensor(self.y_test), Tensor(self.t_test))
         dataset_all = TensorDataset(Tensor(self.x), Tensor(self.y), Tensor(self.t))
 
         # Required: Create DataLoader for training the models.
-        loader_train = DataLoader(dataset_train, shuffle=shuffle, batch_size=batch)
+        loader_train = DataLoader(dataset_train, shuffle=True, batch_size=batch)
         loader_test = DataLoader(dataset_test, shuffle=False, batch_size=self.x_test.shape[0])
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
 
         if self.use_validation:
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val), Tensor(self.t_val))
-            loader_val = DataLoader(dataset_val, shuffle=shuffle, batch_size=self.x_val.shape[0])
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=self.x_val.shape[0])
         else:
             loader_val = None
 
@@ -137,7 +137,13 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
         x = np.concatenate([s_x, t_x], axis=0)
         t = np.concatenate([np.zeros(n_source), t_t], axis=0)
         y = np.concatenate([np.zeros(n_source), t_y], axis=0)
-        d = np.concatenate([np.ones(n_source), np.zeros(n_target)], axis=0)
+        d = np.concatenate([np.zeros(n_source), np.ones(n_target)], axis=0)
+
+        permutation = np.random.permutation(len(y))
+        x = x[permutation]
+        t = t[permutation]
+        y = y[permutation]
+        d = d[permutation]
 
         data = DataTargetAndSource(x=x,
                                    t=t,

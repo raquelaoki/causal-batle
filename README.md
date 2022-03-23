@@ -104,7 +104,7 @@ ucate:
 1) Fit dragonnet
    * double check losses from dragonnet - here
 2) Bayesian Dragonnet 
-   * metrics 
+   * metrics - metric_function_dragonnet_y should be mean_?
 3) AIPW 
    * gwas version is not good
    * improve parameters?
