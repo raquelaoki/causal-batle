@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
+from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score
 
 import logging
 
@@ -67,7 +67,11 @@ class causal_batle_head(nn.Module):
         self.outcome_layer_0 = bl.Normal(in_features=self.units2, out_features=self.units3)
         self.outcome_layer_1 = bl.Normal(in_features=self.units2, out_features=self.units3)
         self.t_predictions = bl.Categorical(in_features=self.units1, out_features=self.units3)
-        self.d_predictions = bl.Categorical(in_features=self.units1, out_features=self.units3)
+
+        # Discriminator
+        self.sigmoid = nn.Sigmoid()
+        self.head_layer_d = nn.Linear(in_features=self.units1, out_features=self.units2)
+        self.d_predictions = nn.Linear(in_features=self.units2, out_features=1)
 
         # Reconstruction
         self.decoder_layer = decoder(n_covariates=self.n_covariates, units1=self.units1)
@@ -88,7 +92,8 @@ class causal_batle_head(nn.Module):
         y1_predictions = self.outcome_layer_1(y1_hidden)
 
         t_predictions = self.t_predictions(inputs)
-        d_predictions = self.d_predictions(inputs)
+        d_hidden = self.head_layer_d(inputs)
+        d_predictions = self.sigmoid(self.d_predictions(d_hidden))
         x_reconstruction = self.decoder_layer(inputs)
 
         predictions = {'y0': y0_predictions,
@@ -136,7 +141,6 @@ def fit_causal_batle(epochs,
     :param home_dir:
     :param config_name:
     :param path_logger:
-    :param metric_functions:
     :param use_tensorboard:
     :param loader_test:
     :param epochs: integer
@@ -144,7 +148,7 @@ def fit_causal_batle(epochs,
     :param loader_train: DataLoader
     :param optimizer: torch.optim
     :param criterion: List of criterions
-    :param metrics_functions: List of metrics
+    :param metric_functions:
     :param use_validation: Bool
     :param device: torch.device
     :param loader_val: DataLoader (Optional)
@@ -171,17 +175,19 @@ def fit_causal_batle(epochs,
         alpha = torch.ones(len(criterion))
     elif not torch.is_tensor(alpha):
         alpha = torch.tensor(alpha)
-    assert len(alpha)==len(criterion), 'Loss weights do not match number of losses'
+    assert len(alpha) == len(criterion), 'Loss weights do not match number of losses'
 
     loss_train_t, metric_train_t = np.zeros(epochs), np.zeros(epochs)  # _t: propensity score loss
     loss_train_y, metric_train_y = np.zeros(epochs), np.zeros(epochs)  # _y: outcome loss
     loss_train_d, metric_train_d = np.zeros(epochs), np.zeros(epochs)  # _d: discriminator loss
     loss_train_r, metric_train_r = np.zeros(epochs), np.zeros(epochs)  # _r: reconstruction loss
+    loss_train_a = np.zeros(epochs)  # _a: adversarial loss
 
     loss_val_t, metric_val_t = np.zeros(epochs), np.zeros(epochs)
     loss_val_y, metric_val_y = np.zeros(epochs), np.zeros(epochs)
     loss_val_d, metric_val_d = np.zeros(epochs), np.zeros(epochs)
     loss_val_r, metric_val_r = np.zeros(epochs), np.zeros(epochs)
+    loss_val_a = np.zeros(epochs)
 
     for e in range(epochs):
         # set model to train mode
@@ -189,27 +195,28 @@ def fit_causal_batle(epochs,
 
         torch.cuda.empty_cache()
         _metrics_t, _metrics_y, _metrics_d, _metrics_r = [], [], [], []
-        _loss_t, _loss_y, _loss_d, _loss_r = [], [], [], []
+        _loss_t, _loss_y, _loss_d, _loss_r, _loss_a = [], [], [], [], []
 
         for i, batch in enumerate(loader_train):
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
-            lb_t, lb_y, lb_d, lb_r = _calculate_criterion_causalbatle(batch=batch,
-                                                                      criterion_function=criterion,
-                                                                      predictions=predictions,
-                                                                      device=device)
+            lb_t, lb_y, lb_d, lb_r, lb_a = _calculate_criterion_causalbatle(batch=batch,
+                                                                            criterion_function=criterion,
+                                                                            predictions=predictions,
+                                                                            device=device)
 
             # Calculate tarnet loss
-            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_d + alpha[3] * lb_r
+            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_d + alpha[3] * lb_r + alpha[4] * lb_a
             loss_batch.backward()
             optimizer.step()
             _loss_t.append(lb_t.cpu().detach().numpy())
             _loss_y.append(lb_y.cpu().detach().numpy())
             _loss_d.append(lb_d.cpu().detach().numpy())
             _loss_r.append(lb_r.cpu().detach().numpy())
+            _loss_a.append(lb_a.cpu().detach().numpy())
             mb_t, mb_y, mb_d, mb_r = _calculate_metric_causalbatle(metric_functions=metric_functions,
-                                                                    batch=batch,
-                                                                    predictions=predictions)
+                                                                   batch=batch,
+                                                                   predictions=predictions)
             _metrics_t.append(mb_t)
             _metrics_y.append(mb_y)
             _metrics_d.append(mb_d)
@@ -219,6 +226,7 @@ def fit_causal_batle(epochs,
         loss_train_y[e] = np.nanmean(_loss_y)
         loss_train_d[e] = np.nanmean(_loss_d)
         loss_train_r[e] = np.nanmean(_loss_r)
+        loss_train_a[e] = np.nanmean(_loss_a)
 
         metric_train_t[e] = np.nanmean(_metrics_t)
         metric_train_y[e] = np.nanmean(_metrics_y)
@@ -231,7 +239,8 @@ def fit_causal_batle(epochs,
             batch = next(iter(loader_val))
             predictions = model(batch[0].to(device))
 
-            loss_val_t[e], loss_val_y[e], loss_val_d[e], loss_val_r[e] = _calculate_criterion_causalbatle(
+            loss_val_t[e], loss_val_y[e], loss_val_d[e], loss_val_r[e], loss_val_a[
+                e] = _calculate_criterion_causalbatle(
                 criterion_function=criterion,
                 batch=batch,
                 predictions=predictions,
@@ -241,18 +250,18 @@ def fit_causal_batle(epochs,
                 batch=batch,
                 predictions=predictions)
         else:
-            loss_val_t[e], loss_val_y[e], loss_val_d[e], loss_val_r[e] = None, None, None, None
+            loss_val_t[e], loss_val_y[e], loss_val_d[e], loss_val_r[e], loss_val_a[e] = None, None, None, None, None
             metric_val_t[e], metric_val_y[e], metric_val_d[e], metric_val_r[e] = None, None, None, None
 
         if use_tensorboard:
             values = {'loss_train_t': loss_train_t[e], 'loss_train_y': loss_train_y[e],
-                      'loss_train_d': loss_train_d[e], 'loss_train_r': loss_train_r[e],
+                      'loss_train_d': loss_train_d[e], 'loss_train_r': loss_train_r[e], 'loss_train_a': loss_train_a[e],
                       'metric_train_t': metric_train_t[e], 'metric_train_y': metric_train_y[e],
                       'metric_train_d': metric_train_d[e], 'metric_train_r': metric_train_r[e],
                       }
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='train')
             values = {'loss_val_t': loss_val_t[e], 'loss_val_y': loss_val_y[e],
-                      'loss_val_d': loss_val_d[e], 'loss_val_r': loss_val_r[e],
+                      'loss_val_d': loss_val_d[e], 'loss_val_r': loss_val_r[e], 'loss_val_a': loss_val_a[e],
                       'metric_val_t': metric_val_t[e], 'metric_val_y': metric_val_y[e],
                       'metric_val_d': metric_val_d[e], 'metric_val_r': metric_val_r[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
@@ -269,27 +278,16 @@ def fit_causal_batle(epochs,
         predictions=predictions,
     )
 
-    loss = {'loss_train_t': loss_train_t,
-            'loss_val_t': loss_val_t,
-            'loss_train_y': loss_train_y,
-            'loss_val_y': loss_val_y,
-            'loss_train_d': loss_train_d,
-            'loss_val_d': loss_val_d,
-            'loss_train_r': loss_train_r,
-            'loss_val_r': loss_val_r,
+    loss = {'loss_train_t': loss_train_t, 'loss_val_t': loss_val_t,
+            'loss_train_y': loss_train_y, 'loss_val_y': loss_val_y,
+            'loss_train_d': loss_train_d, 'loss_val_d': loss_val_d,
+            'loss_train_r': loss_train_r, 'loss_val_r': loss_val_r,
+            'loss_train_a': loss_train_a, 'loss_val_a': loss_val_a,
             }
-    metrics = {'metric_train_t': metric_train_t,
-               'metric_val_t': metric_val_t,
-               'metric_test_t': metric_test_t,
-               'metric_train_y': metric_train_y,
-               'metric_val_y': metric_val_y,
-               'metric_test_y': metric_test_y,
-               'metric_train_d': metric_train_d,
-               'metric_val_d': metric_val_d,
-               'metric_test_d': metric_test_d,
-               'metric_train_r': metric_train_r,
-               'metric_val_r': metric_val_r,
-               'metric_test_r': metric_test_r
+    metrics = {'metric_train_t': metric_train_t, 'metric_val_t': metric_val_t, 'metric_test_t': metric_test_t,
+               'metric_train_y': metric_train_y, 'metric_val_y': metric_val_y, 'metric_test_y': metric_test_y,
+               'metric_train_d': metric_train_d, 'metric_val_d': metric_val_d, 'metric_test_d': metric_test_d,
+               'metric_train_r': metric_train_r, 'metric_val_r': metric_val_r, 'metric_test_r': metric_test_r
                }
 
     # thhold = find_optimal_cutoff_wrapper_t(loader_train=loader_train, model=model, device=device)
@@ -304,7 +302,8 @@ def _calculate_criterion_causalbatle(criterion_function, batch, predictions, dev
     loss_y = criterion_function[1](batch=batch, predictions=predictions, device=device)
     loss_d = criterion_function[2](batch=batch, predictions=predictions, device=device)
     loss_r = criterion_function[3](batch=batch, predictions=predictions, device=device)
-    return loss_t, loss_y, loss_d, loss_r
+    loss_a = criterion_function[4](batch=batch, predictions=predictions, device=device)
+    return loss_t, loss_y, loss_d, loss_r, loss_a
 
 
 def _calculate_metric_causalbatle(metric_functions, batch, predictions):
@@ -337,13 +336,22 @@ def criterion_function_y(batch, predictions, device='cpu'):
     elif mask0.sum() == 0:
         return loss_y1_babch
     else:
-        return loss_y0_babch+loss_y1_babch
+        return loss_y0_babch + loss_y1_babch
 
 
 def criterion_function_discriminator(batch, predictions, device='cpu'):
+    """ BCE loss. While T and Y are bayesian, D is kept non-bayesian due to discriminator/adversarial components.
+    Reference (https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html)
+    :param batch:
+    :param predictions:
+    :param device:
+    :return:
+    """
     d_predictions = predictions['d']
     d_obs = batch[3].to(device)
-    return -d_predictions.log_prob(d_obs).mean()
+    # -d_predictions.log_prob(d_obs).mean()
+    criterion = nn.BCELoss()
+    return criterion(d_predictions, d_obs)
 
 
 def criterion_function_reconstruction(batch, predictions, device='cpu'):
@@ -353,9 +361,16 @@ def criterion_function_reconstruction(batch, predictions, device='cpu'):
     return criterion(reconstruction, x)
 
 
+def criterion_function_adversarial(batch, predictions, device='cpu'):
+    d_predictions = predictions['d']
+    d_obs = 1 - batch[3]  # Set source domain as 1.
+    criterion = nn.BCELoss()
+    # Calculate adversarial loss only over the source domain.
+    return criterion(d_predictions[d_obs == 1], d_obs[d_obs == 1].to(device))
+
+
 def metric_function_discriminator(batch, predictions):
-    dif = batch[3] - predictions['d'].mean
-    return np.abs(dif.detach().numpy()).mean()
+    return roc_auc_score(batch[3], predictions['d'].detach().numpy())
 
 
 def metric_function_reconstruction(batch, predictions):

@@ -71,7 +71,8 @@ def make_model(params):
         criterion = [cb.criterion_function_t,
                      cb.criterion_function_y,
                      cb.criterion_function_discriminator,
-                     cb.criterion_function_reconstruction]  # Missing adversarial
+                     cb.criterion_function_reconstruction,
+                     cb.criterion_function_adversarial]  # Missing adversarial
         metric_functions = [bl.metric_function_dragonnet_t,
                             bl.metric_function_dragonnet_y,
                             cb.metric_function_discriminator,

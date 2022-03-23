@@ -135,8 +135,8 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
         n_target = t_x.shape[0]
 
         x = np.concatenate([s_x, t_x], axis=0)
-        t = np.concatenate([np.zeros(n_source), t_t], axis=0)
-        y = np.concatenate([np.zeros(n_source), t_y], axis=0)
+        t = np.concatenate([np.zeros(n_source).reshape(-1,1), t_t.reshape(-1,1)], axis=0)
+        y = np.concatenate([np.zeros(n_source).reshape(-1,1), t_y.reshape(-1,1)], axis=0)
         d = np.concatenate([np.zeros(n_source), np.ones(n_target)], axis=0)
 
         permutation = np.random.permutation(len(y))

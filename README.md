@@ -101,21 +101,21 @@ ucate:
 * combine all the csvs
 
 ### workflow
-1) Fit dragonnet
+1) causal batle 
+   * dropout for predictions 
+2) Fit dragonnet
    * double check losses from dragonnet - here
-2) Bayesian Dragonnet 
-   * metrics - metric_function_dragonnet_y should be mean_?
 3) AIPW 
    * gwas version is not good
-   * improve parameters?
-https://github.com/OATML/ucate/blob/main/ucate/library/models/tarnet.py
-https://github.com/OATML/ucate/blob/main/ucate/library/modules/samplers.py
-3) save best epoch model 
-4) save output for data + model
-5) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
-6) Wrapper to run dragonnet b times
+4) save best epoch model 
+5) save output for data + model
+6) https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
+7) Wrapper to run dragonnet b times
 8) Fit causa-battle 
 9) Fit cevae 
-10) Fit X-learner,
-11) Add new dataset (vision)
-12) Add another dataset
+10) fit dr-cfr 2020
+11) Fit X-learner,
+12) Add new dataset (vision)
+13) Add another dataset
+
+Note: My discriminator loss is right! 

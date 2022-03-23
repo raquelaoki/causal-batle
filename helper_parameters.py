@@ -141,11 +141,11 @@ def _check_params_consistency(params):
         params['lr'] = params.get('lr', 0.01)
         params['weight_decay'] = params.get('weight_decay', 0.05)
         params['dropout_p'] = params.get('dropout_p', 0.5)
-        params['alpha'] = params.get('alpha', [1, 1, 0])
+        params['alpha'] = params.get('alpha', [1, 1, 1, 1, 1])
         params['use_validation'] = params.get('use_validation', True)
         params['use_dropout'] = params.get('use_dropout', True)
         params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_source'] = params.get('use_source', True) # Adding source
+        params['use_source'] = params.get('use_source', True)  # Adding source
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', False)
     else:
@@ -163,7 +163,7 @@ def _check_params_consistency(params):
 def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                     batch_size=200, lr=0.01, weight_decay=0.01, units1=100, units2=50, units3=1,
                     n_sample=5000, n_covariates=1000, use_validation=False, use_tensorboard=False,
-                    use_dropout=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1,
+                    use_source=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1,
                     seed=1, alpha=[1, 1, 1], config_name='configA', ate_method_list=['naive']):
     """
     Function for testing, creates params dictionary withouh the yaml files.
@@ -189,13 +189,13 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
     else:
         logger.debug('...data not implemented')
 
-    if params['model_name'] == 'dragonnet':
-        params = _make_parameters_model_dragonnet(params, max_epochs=max_epochs,
-                                                  batch_size=batch_size, lr=lr,
-                                                  weight_decay=weight_decay, units1=units1, units2=units2,
-                                                  units3=units3, use_validation=use_validation,
-                                                  use_dropout=use_dropout, dropout_p=dropout_p,
-                                                  alpha=alpha)
+    use_dragonnet_backbone = ['dragonnet', 'bdragonnet', 'batle']
+    if params['model_name'] in use_dragonnet_backbone:
+        params = _make_parameters_model_dragonnet_backbone(params, max_epochs=max_epochs,
+                                                           batch_size=batch_size, lr=lr,
+                                                           weight_decay=weight_decay, units1=units1, units2=units2,
+                                                           units3=units3, use_validation=use_validation,
+                                                           dropout_p=dropout_p, alpha=alpha, use_source=use_source)
     else:
         logger.debug('... model option not available in parameter_debug()')
     params = _check_params_consistency(params)
@@ -233,22 +233,21 @@ def _make_paramters_data_ihdp(params,
     return params
 
 
-def _make_parameters_model_dragonnet(params,
-                                     batch_size=200,
-                                     max_epochs=100,
-                                     decay=20,
-                                     gamma=0.7,
-                                     lr=0.01,
-                                     weight_decay=0.05,
-                                     type_original=True,
-                                     units1=200,
-                                     units2=100,
-                                     units3=1,
-                                     use_validation=False,
-                                     use_dropout=False,
-                                     dropout_p=0,
-                                     alpha=[1, 1, 1]):
-    params['use_source'] = False
+def _make_parameters_model_dragonnet_backbone(params,
+                                              batch_size=200,
+                                              max_epochs=100,
+                                              decay=20,
+                                              gamma=0.7,
+                                              lr=0.01,
+                                              weight_decay=0.05,
+                                              units1=200,
+                                              units2=100,
+                                              units3=1,
+                                              use_validation=False,
+                                              dropout_p=0,
+                                              alpha=[1, 1, 1],
+                                              use_source=False):
+    params['use_source'] = use_source
     params['shuffle'] = True
     params['batch_size'] = batch_size
     params['max_epochs'] = max_epochs
@@ -260,8 +259,6 @@ def _make_parameters_model_dragonnet(params,
     params['units1'] = units1
     params['units2'] = units2
     params['units3'] = units3
-    params['type_original'] = type_original
     params['use_validation'] = use_validation
-    params['use_dropout'] = use_dropout
     params['dropout_p'] = dropout_p
     return params
