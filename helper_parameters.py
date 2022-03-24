@@ -106,6 +106,7 @@ def _check_params_consistency(params):
         params['use_source'] = params.get('use_source', False)
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', True)
+        params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
     elif params['model_name'] == 'bdragonnet':
         params['max_epochs'] = params.get('max_epochs', 50)
         params['batch_size'] = params.get('batch_size', 50)
@@ -122,6 +123,7 @@ def _check_params_consistency(params):
         params['use_source'] = params.get('use_source', False)
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', False)
+        params['forward_passes'] = params.get('forward_passes', 10)  # Used only for bdragonnet and batle.
     elif params['model_name'] == 'aipw':
         assert 'n_covariates' in params, 'n_covariates missing'
         params['max_epochs'] = params.get('max_epochs', 50)
@@ -133,6 +135,7 @@ def _check_params_consistency(params):
         params['use_source'] = params.get('use_source', False)
         params['shuffle'] = params.get('shuffle', False)
         params['alpha'] = params.get('alpha', [1, 1, 1])
+        params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
     elif params['model_name'] == 'batle':
         params['max_epochs'] = params.get('max_epochs', 50)
         params['batch_size'] = params.get('batch_size', 50)
@@ -149,6 +152,7 @@ def _check_params_consistency(params):
         params['use_source'] = params.get('use_source', True)  # Adding source
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', False)
+        params['forward_passes'] = params.get('forward_passes', 10)  # Used only for bdragonnet and batle.
     else:
         logger.debug('%s not implemented', params['model_name'])
 

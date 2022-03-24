@@ -8,12 +8,24 @@ from torch.utils.data import DataLoader
 logger = logging.getLogger(__name__)
 
 
-def calculate_ate(loader_train, loader_test, loader_all, model, ate_method_list=['naive', 'ipw', 'aipw']):
-    ate_train = _per_set_ate(loader_train, model, make_predictions=pred_several_batches,
+def calculate_ate(loader_train, loader_test, loader_all, model,
+                  ate_method_list=['naive', 'ipw', 'aipw'], device='cpu',
+                  forward_passes=None):
+    """
+    :param loader_train:
+    :param loader_test:
+    :param loader_all:
+    :param model:
+    :param ate_method_list:
+    :param device:
+    :param forward_passes: None, it is only used for the bayesian version.
+    :return:
+    """
+    ate_train = _per_set_ate(loader_train, model, make_predictions=_make_predictions_regular,
                              methods_list=ate_method_list, loader_name='train')
-    ate_test = _per_set_ate(loader_test, model, make_predictions=pred_single_batch,
+    ate_test = _per_set_ate(loader_test, model, make_predictions=_make_predictions_regular,
                             methods_list=ate_method_list, loader_name='test')
-    ate_all = _per_set_ate(loader_all, model, make_predictions=pred_several_batches,
+    ate_all = _per_set_ate(loader_all, model, make_predictions=_make_predictions_regular,
                            methods_list=ate_method_list, loader_name='all')
 
     ate_estimated = {}
@@ -24,13 +36,18 @@ def calculate_ate(loader_train, loader_test, loader_all, model, ate_method_list=
     return ate_estimated
 
 
-def calculate_ate_bayesian(loader_train, loader_test, loader_all, model, ate_method_list=['naive', 'ipw', 'aipw']):
-    ate_train = _per_set_ate(loader_train, model, make_predictions=pred_several_batches_b,
-                             methods_list=ate_method_list, loader_name='train')
-    ate_test = _per_set_ate(loader_test, model, make_predictions=pred_single_batch_b,
-                            methods_list=ate_method_list, loader_name='test')
-    ate_all = _per_set_ate(loader_all, model, make_predictions=pred_several_batches_b,
-                           methods_list=ate_method_list, loader_name='all')
+def calculate_ate_bayesian(loader_train, loader_test, loader_all, model,
+                           ate_method_list=['naive', 'ipw', 'aipw'], device='cpu',
+                           forward_passes=10):
+    ate_train = _per_set_ate(loader_train, model, make_predictions=_make_predictions_dropout,
+                             methods_list=ate_method_list, loader_name='train',
+                             device=device, forward_passes=forward_passes)
+    ate_test = _per_set_ate(loader_test, model, make_predictions=_make_predictions_dropout,
+                            methods_list=ate_method_list, loader_name='test',
+                            device=device, forward_passes=forward_passes)
+    ate_all = _per_set_ate(loader_all, model, make_predictions=_make_predictions_dropout,
+                           methods_list=ate_method_list, loader_name='all',
+                           device=device, forward_passes=forward_passes)
 
     ate_estimated = {}
     ate_estimated.update(ate_all)
@@ -40,7 +57,7 @@ def calculate_ate_bayesian(loader_train, loader_test, loader_all, model, ate_met
     return ate_estimated
 
 
-def pred_several_batches(data_loader, model):
+def _make_predictions_regular(data_loader, model, device, place_holder):
     y_obs, t_obs = np.array([]), np.array([])
     y0_pred, y1_pred, t_pred = np.array([]), np.array([]), np.array([])
 
@@ -55,59 +72,53 @@ def pred_several_batches(data_loader, model):
     return t_pred, y0_pred, y1_pred, t_obs, y_obs
 
 
-def pred_several_batches_b(data_loader, model):
+def _make_predictions_dropout(data_loader, model, device, forward_passes):
     y_obs, t_obs = np.array([]), np.array([])
-    y0_pred, y1_pred, t_pred = np.array([]), np.array([]), np.array([])
+    y0_pred_mean, y1_pred_mean, t_pred_mean = np.array([]), np.array([]), np.array([])
 
     for i, batch in enumerate(data_loader):
         y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
         t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
-        predictions = model(batch[0])
+        predictions = model(batch[0].to(device))
         t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
-        y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.mean.detach().numpy().reshape(-1)], 0)
-        y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.mean.detach().numpy().reshape(-1)], 0)
-        t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.mean.detach().numpy().reshape(-1)], 0)
-    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+        y0_pred = y0_predictions.mean.detach().numpy().reshape(-1,1)
+        y1_pred = y1_predictions.mean.detach().numpy().reshape(-1,1)
+        t_pred = t_predictions.mean.detach().numpy().reshape(-1,1)
 
-def pred_single_batch(data_loader, model):
-    batch = next(iter(data_loader))
-    y_obs = batch[1].detach().numpy().reshape(-1)
-    t_obs = batch[2].detach().numpy().reshape(-1)
-    predictions = model(inputs=batch[0])
-    t_pred, y0_pred, y1_pred = predictions['t'], predictions['y0'], predictions['y1']
-    t_pred = t_pred.detach().numpy().reshape(-1)
-    y0_pred = y0_pred.detach().numpy().reshape(-1)
-    y1_pred = y1_pred.detach().numpy().reshape(-1)
-    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+        # Make more predictions in the same batch.
+        for j in range(forward_passes-1):
+            predictions = model(batch[0].to(device))
+            t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
+            y0_pred = np.concatenate([y0_pred, y0_predictions.mean.detach().numpy().reshape(-1, 1)], 1)
+            y1_pred = np.concatenate([y1_pred, y1_predictions.mean.detach().numpy().reshape(-1, 1)], 1)
+            t_pred = np.concatenate([t_pred, t_predictions.mean.detach().numpy().reshape(-1, 1)], 1)
 
-def pred_single_batch_b(data_loader, model):
-    batch = next(iter(data_loader))
-    y_obs = batch[1].detach().numpy().reshape(-1)
-    t_obs = batch[2].detach().numpy().reshape(-1)
-    predictions = model(inputs=batch[0])
-    t_pred, y0_pred, y1_pred = predictions['t'], predictions['y0'], predictions['y1']
-    t_pred = t_pred.mean.detach().numpy().reshape(-1)
-    y0_pred = y0_pred.mean.detach().numpy().reshape(-1)
-    y1_pred = y1_pred.mean.detach().numpy().reshape(-1)
-    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+        # Mean of predictions.
+        y0_pred = np.mean(y0_pred, axis=1)
+        y1_pred = np.mean(y1_pred, axis=1)
+        t_pred = np.mean(t_pred, axis=1)
+        # Concatenate Means.
+        y0_pred_mean = np.concatenate([y0_pred_mean.reshape(-1), y0_pred.reshape(-1)], 0)
+        y1_pred_mean = np.concatenate([y1_pred_mean.reshape(-1), y1_pred.reshape(-1)], 0)
+        t_pred_mean = np.concatenate([t_pred_mean.reshape(-1), t_pred.reshape(-1)], 0)
+
+    return t_pred_mean, y0_pred_mean, y1_pred_mean, t_obs, y_obs
 
 
 def _per_set_ate(data_loader,
                  model,
                  make_predictions,
                  methods_list=['naive'],
-                 loader_name='DEFAULT'):
+                 loader_name='DEFAULT',
+                 device='cpu',
+                 forward_passes=None):
     """
     Calculate the Average Treatment Effect
-    :param include_ipw:
     :param data_loader: if neural networks, needs to be a DataLoader objs
     :param model: object
-    :param single_batch: False (all, train - contain several batches), True (val, test)
-    :param include_aipw: if True, calculate naive and aipw. If False, only calculate naive.
-    :return:ate_naive_train
     """
 
-    t_pred, y0_pred, y1_pred, t_obs, y_obs = make_predictions(data_loader, model)
+    t_pred, y0_pred, y1_pred, t_obs, y_obs = make_predictions(data_loader, model, device, forward_passes)
 
     implemented_methods = {'naive': _naive_ate,
                            'ipw': _ipw_ate,
@@ -162,7 +173,7 @@ def _truncate_by_g(attribute, g, level=0.05):
     :param level: limites
     :return: filted attribute column
     """
-    assert len(attribute) == len(g), 'Dimensions must be the same!'
+    assert len(attribute) == len(g), 'Dimensions must be the same!' + str(len(attribute)) + ' and ' + str(len(g))
     keep_these = np.logical_and(g >= level, g <= 1. - level)
     return attribute[keep_these]
 

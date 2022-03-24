@@ -61,13 +61,13 @@ class DataTargetAndSource:
 
         # Required: Create DataLoader for training the models.
         loader_train = DataLoader(dataset_train, shuffle=True, batch_size=batch)
-        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=self.x_test.shape[0])
+        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=batch*4)
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
 
         if self.use_validation:
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val),
                                         Tensor(self.t_val), Tensor(self.d_val))
-            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=self.x_val.shape[0])
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=batch*4)
         else:
             loader_val = None
 
@@ -106,12 +106,12 @@ class DataTarget:
 
         # Required: Create DataLoader for training the models.
         loader_train = DataLoader(dataset_train, shuffle=True, batch_size=batch)
-        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=self.x_test.shape[0])
+        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=batch)
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
 
         if self.use_validation:
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val), Tensor(self.t_val))
-            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=self.x_val.shape[0])
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=batch)
         else:
             loader_val = None
 

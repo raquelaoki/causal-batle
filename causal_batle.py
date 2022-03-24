@@ -88,12 +88,14 @@ class causal_batle_head(nn.Module):
         y1_hidden = self.elu(self.head_layer2_2_1(self.dropout(y1_hidden)))
 
         # Treatment specific - third layer.
-        y0_predictions = self.outcome_layer_0(y0_hidden)
-        y1_predictions = self.outcome_layer_1(y1_hidden)
+        y0_predictions = self.outcome_layer_0(self.dropout(y0_hidden))
+        y1_predictions = self.outcome_layer_1(self.dropout(y1_hidden))
 
-        t_predictions = self.t_predictions(inputs)
+        t_predictions = self.t_predictions(self.dropout(inputs))
+
         d_hidden = self.head_layer_d(inputs)
         d_predictions = self.sigmoid(self.d_predictions(d_hidden))
+
         x_reconstruction = self.decoder_layer(inputs)
 
         predictions = {'y0': y0_predictions,
@@ -119,6 +121,16 @@ class decoder(nn.Module):
         reconstruction = self.elu(self.decoder_layer1_2(reconstruction))
         reconstruction = self.decoder_layer1_3(reconstruction)
         return reconstruction
+
+
+def enable_dropout(model):
+    """ Function to enable the dropout layers during test-time.
+    Used for MC-dropout.
+    Reference: https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch
+    """
+    for m in model.modules():
+        if m.__class__.__name__.startswith('Dropout'):
+            m.train()
 
 
 def fit_causal_batle(epochs,
@@ -191,14 +203,15 @@ def fit_causal_batle(epochs,
     loss_val_a = np.zeros(epochs)
 
     for e in range(epochs):
-        # set model to train mode
-        model.train()
 
         torch.cuda.empty_cache()
         _metrics_t, _metrics_y, _metrics_d, _metrics_r = [], [], [], []
         _loss_t, _loss_y, _loss_d, _loss_r, _loss_a = [], [], [], [], []
 
         for i, batch in enumerate(loader_train):
+            # set model to train mode
+            model.train()
+
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
             lb_t, lb_y, lb_d, lb_r, lb_a = _calculate_criterion_causalbatle(batch=batch,
@@ -236,20 +249,14 @@ def fit_causal_batle(epochs,
 
         # print('epoch', e, loss_train_t[e], loss_train_y[e])
         if use_validation:
-            model.eval()
-            batch = next(iter(loader_val))
-            predictions = model(batch[0].to(device))
+            lm_val = _calculate_loss_metric_noopti(model=model, loader=loader_val,  device=device,
+                                                   criterion=criterion, metric_functions=metric_functions)
+            loss_val_t[e], loss_val_y[e] = lm_val['loss_t'], lm_val['loss_y']
+            loss_val_d[e], loss_val_r[e] = lm_val['loss_d'], lm_val['loss_r']
+            loss_val_a[e] = lm_val['loss_a']
+            metric_val_t[e], metric_val_y[e] = lm_val['metric_t'], lm_val['metric_y']
+            metric_val_d[e], metric_val_r[e] = lm_val['metric_d'], lm_val['metric_r']
 
-            loss_val_t[e], loss_val_y[e], loss_val_d[e], loss_val_r[e], loss_val_a[
-                e] = _calculate_criterion_causalbatle(
-                criterion_function=criterion,
-                batch=batch,
-                predictions=predictions,
-                device=device)
-            metric_val_t[e], metric_val_y[e], metric_val_d[e], metric_val_r[e] = _calculate_metric_causalbatle(
-                metric_functions=metric_functions,
-                batch=batch,
-                predictions=predictions)
         else:
             loss_val_t[e], loss_val_y[e], loss_val_d[e], loss_val_r[e], loss_val_a[e] = None, None, None, None, None
             metric_val_t[e], metric_val_y[e], metric_val_d[e], metric_val_r[e] = None, None, None, None
@@ -267,17 +274,12 @@ def fit_causal_batle(epochs,
                       'metric_val_d': metric_val_d[e], 'metric_val_r': metric_val_r[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
 
-    # Change model to eval mode
-    model.eval()
 
-    # Metrics on testins set
-    batch = next(iter(loader_test))
-    predictions = model(batch[0].to(device))
-    metric_test_t, metric_test_y, metric_test_d, metric_test_r = _calculate_metric_causalbatle(
-        metric_functions=metric_functions,
-        batch=batch,
-        predictions=predictions,
-    )
+    # Calculating metrics on testing set - no dropout used here.
+    lm_test = _calculate_loss_metric_noopti(model=model, loader=loader_test,
+                                            device=device, criterion=criterion, metric_functions=metric_functions)
+    metric_test_t, metric_test_y = lm_test['metric_t'], lm_test['metric_y']
+    metric_test_d, metric_test_r = lm_test['metric_d'], lm_test['metric_r']
 
     loss = {'loss_train_t': loss_train_t, 'loss_val_t': loss_val_t,
             'loss_train_y': loss_train_y, 'loss_val_y': loss_val_y,
@@ -291,11 +293,53 @@ def fit_causal_batle(epochs,
                'metric_train_r': metric_train_r, 'metric_val_r': metric_val_r, 'metric_test_r': metric_test_r
                }
 
-    # thhold = find_optimal_cutoff_wrapper_t(loader_train=loader_train, model=model, device=device)
-    # metrics['thhold'] = thhold
-    model.eval()
-
     return model, loss, metrics
+
+
+def _calculate_loss_metric_noopti(model, loader, device, criterion, metric_functions):
+    """ Calculate loss and metric per epoch.
+    Ideal for validation and test set.
+    :param model:
+    :param loader:
+    :param device:
+    :return:
+    """
+    _metrics_t, _metrics_y, _metrics_d, _metrics_r = [], [], [], []
+    _loss_t, _loss_y, _loss_d, _loss_r, _loss_a = [], [], [], [], []
+    for i, batch in enumerate(loader):
+        model.eval()
+        predictions = model(batch[0].to(device))
+        lb_t, lb_y, lb_d, lb_r, lb_a = _calculate_criterion_causalbatle(batch=batch,
+                                                                        criterion_function=criterion,
+                                                                        predictions=predictions,
+                                                                        device=device)
+        _loss_t.append(lb_t.cpu().detach().numpy())
+        _loss_y.append(lb_y.cpu().detach().numpy())
+        _loss_d.append(lb_d.cpu().detach().numpy())
+        _loss_r.append(lb_r.cpu().detach().numpy())
+        _loss_a.append(lb_a.cpu().detach().numpy())
+
+        mb_t, mb_y, mb_d, mb_r = _calculate_metric_causalbatle(metric_functions=metric_functions,
+                                                               batch=batch,
+                                                               predictions=predictions)
+        _metrics_t.append(mb_t)
+        _metrics_y.append(mb_y)
+        _metrics_d.append(mb_d)
+        _metrics_r.append(mb_r)
+
+    output = {
+        'loss_t': np.nanmean(_loss_t),
+        'loss_y': np.nanmean(_loss_y),
+        'loss_d': np.nanmean(_loss_d),
+        'loss_r': np.nanmean(_loss_r),
+        'loss_a': np.nanmean(_loss_a),
+        'metric_t': np.nanmean(_metrics_t),
+        'metric_y': np.nanmean(_metrics_y),
+        'metric_d': np.nanmean(_metrics_d),
+        'metric_r': np.nanmean(_metrics_r)
+    }
+
+    return output
 
 
 def _calculate_criterion_causalbatle(criterion_function, batch, predictions, device='cpu'):
@@ -312,7 +356,6 @@ def _calculate_metric_causalbatle(metric_functions, batch, predictions):
     metrics_y = metric_functions[1](batch=batch, predictions=predictions)
     metrics_d = metric_functions[2](batch=batch, predictions=predictions)
     metrics_r = metric_functions[3](batch=batch, predictions=predictions)
-
     return metrics_t, metrics_y, metrics_d, metrics_r
 
 
@@ -377,3 +420,5 @@ def metric_function_discriminator(batch, predictions):
 def metric_function_reconstruction(batch, predictions):
     reconstruction = predictions['xr'].detach().numpy().reshape(-1, 1)
     return mean_squared_error(batch[0].reshape(-1, 1), reconstruction)
+
+

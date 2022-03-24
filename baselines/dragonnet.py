@@ -129,10 +129,10 @@ class dragonnet_head(nn.Module):
         y1_hidden = self.elu(self.head_layer2_2_1(self.dropout(y1_hidden)))
 
         # Treatment specific - third layer.
-        y0_predictions = self.outcome_layer_0(y0_hidden)
-        y1_predictions = self.outcome_layer_1(y1_hidden)
+        y0_predictions = self.outcome_layer_0(self.dropout(y0_hidden))
+        y1_predictions = self.outcome_layer_1(self.dropout(y1_hidden))
 
-        t_predictions = self.sigmoid(self.t_predictions(inputs))
+        t_predictions = self.sigmoid(self.t_predictions(self.dropout(inputs)))
 
         predictions = {'y0': y0_predictions,
                        'y1': y1_predictions,

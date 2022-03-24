@@ -150,6 +150,8 @@ def fit_wrapper(params,
                         loader_test=loader_test,
                         loader_all=loader_all,
                         model=model,
-                        ate_method_list=params['ate_method_list'])
+                        ate_method_list=params['ate_method_list'],
+                        device=device,
+                        forward_passes=params['forward_passes'])
     logger.debug("...Model done!")
     return metrics, loss, ate_estimated
