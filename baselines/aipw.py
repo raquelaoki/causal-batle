@@ -131,7 +131,8 @@ def fit_aipw(epochs,
              path_logger='',
              config_name='',
              home_dir='',
-             alpha=[]):
+             alpha=[],
+             episilon=None):
     logger.debug('...starting')
 
     # use prefetch_generator and tqdm for iterating through data

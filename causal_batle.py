@@ -135,7 +135,8 @@ def fit_causal_batle(epochs,
                      alpha=[],
                      path_logger='',
                      config_name='',
-                     home_dir=''):
+                     home_dir='',
+                     episilon=None):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
     :param home_dir:

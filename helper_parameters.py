@@ -71,6 +71,7 @@ def _check_params_consistency(params):
     # Adding default values
     params['repetitions'] = params.get('repetitions', 10)
     params['ate_method_list'] = params.get('ate_method_list', ['naive', 'ipw'])
+    params['episilon'] = params.get('episilon', 0.005)  # Used only for dragonnet (Targeted Loss).
 
     assert params['data_name'] in valid_data_names, 'data_name not implemented!'
     assert params['model_name'] in valid_model_names, 'model_name not implemented!'

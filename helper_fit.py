@@ -141,7 +141,8 @@ def fit_wrapper(params,
                                alpha=alpha,
                                path_logger=path_logger,
                                config_name=params['config_name'],
-                               home_dir=params['home_dir']
+                               home_dir=params['home_dir'],
+                               episilon=params['episilon'],
                                )
 
     logger.debug("...calculating ate")
