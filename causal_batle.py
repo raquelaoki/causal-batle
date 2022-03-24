@@ -202,6 +202,22 @@ def fit_causal_batle(epochs,
     loss_val_r, metric_val_r = np.zeros(epochs), np.zeros(epochs)
     loss_val_a = np.zeros(epochs)
 
+    second_update = ['backbone.dragonnet_head.head_layer2_1_0',
+                     'backbone.dragonnet_head.head_layer2_2_0',
+                     'backbone.dragonnet_head.head_layer2_1_1',
+                     'backbone.dragonnet_head.head_layer2_2_1',
+                      'backbone.dragonnet_head.outcome_layer_0.mu',
+                      'backbone.dragonnet_head.outcome_layer_0.sigma',
+                     'backbone.dragonnet_head.outcome_layer_1.mu',
+                      'backbone.dragonnet_head.outcome_layer_1.sigma',
+                     'backbone.dragonnet_head.t_predictions.logits',
+                      'backbone.dragonnet_head.head_layer_d',
+                     'backbone.dragonnet_head.d_predictions',
+                    'backbone.dragonnet_head.decoder_layer.decoder_layer1_1',
+                     'backbone.dragonnet_head.decoder_layer.decoder_layer1_2',
+                     'backbone.dragonnet_head.decoder_layer.decoder_layer1_3',
+                     ]
+
     for e in range(epochs):
 
         torch.cuda.empty_cache()
@@ -212,17 +228,31 @@ def fit_causal_batle(epochs,
             # set model to train mode
             model.train()
 
+            # Calculate overall loss.
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
-            lb_t, lb_y, lb_d, lb_r, lb_a = _calculate_criterion_causalbatle(batch=batch,
+            lb_t, lb_y, lb_d, lb_r, _ = _calculate_criterion_causalbatle(batch=batch,
                                                                             criterion_function=criterion,
                                                                             predictions=predictions,
                                                                             device=device)
-
-            # Calculate tarnet loss
-            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_d + alpha[3] * lb_r + alpha[4] * lb_a
+            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_d + alpha[3] * lb_r
             loss_batch.backward()
             optimizer.step()
+
+            # Calculate adversarial loss.
+            optimizer.zero_grad()
+            predictions = model(batch[0].to(device))
+            _, _, _, _, lb_a = _calculate_criterion_causalbatle(batch=batch,
+                                                                            criterion_function=criterion,
+                                                                            predictions=predictions,
+                                                                            device=device)
+            loss_adv = alpha[4] * lb_a
+            loss_adv.backward()
+            for name, layer in model.named_modules():
+                if name in second_update:
+                    layer.weight.grad.data.zero_()
+            optimizer.step()
+
             _loss_t.append(lb_t.cpu().detach().numpy())
             _loss_y.append(lb_y.cpu().detach().numpy())
             _loss_d.append(lb_d.cpu().detach().numpy())
@@ -273,7 +303,6 @@ def fit_causal_batle(epochs,
                       'metric_val_t': metric_val_t[e], 'metric_val_y': metric_val_y[e],
                       'metric_val_d': metric_val_d[e], 'metric_val_r': metric_val_r[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
-
 
     # Calculating metrics on testing set - no dropout used here.
     lm_test = _calculate_loss_metric_noopti(model=model, loader=loader_test,
@@ -406,6 +435,14 @@ def criterion_function_reconstruction(batch, predictions, device='cpu'):
 
 
 def criterion_function_adversarial(batch, predictions, device='cpu'):
+    """
+    Reference (https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html)
+    :param batch:
+    :param predictions:
+    :param device:
+    :return:
+    """
+
     d_predictions = predictions['d']
     d_obs = 1 - batch[3]  # Set source domain as 1.
     criterion = nn.BCELoss()

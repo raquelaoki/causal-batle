@@ -73,6 +73,15 @@ def _make_predictions_regular(data_loader, model, device, place_holder):
 
 
 def _make_predictions_dropout(data_loader, model, device, forward_passes):
+    """
+    Reference: (https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch)
+
+    :param data_loader:
+    :param model:
+    :param device:
+    :param forward_passes:
+    :return:
+    """
     y_obs, t_obs = np.array([]), np.array([])
     y0_pred_mean, y1_pred_mean, t_pred_mean = np.array([]), np.array([]), np.array([])
 
