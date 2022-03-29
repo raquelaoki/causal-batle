@@ -16,9 +16,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# logging.basicConfig(level=logging.DEBUG)
-
-
 class DataTargetAndSource:
     def __init__(self, x, t, y, d, test_size=0.33, seed=0, use_validation=False):
         self.use_validation = use_validation
@@ -121,6 +118,23 @@ class DataTarget:
 def make_Data(data_x, data_t, data_y, data_x_source=None,
               seed=1, source_size=0.2, test_size=0.33,
               use_validation=False, use_source=False):
+    """ It creates the data classes (DataTarget or DataTargetAndSource) from input data data_x, data_t, data_y.
+    VALID ONLY FOR GWAS AND IHDP.
+    It will alwyas split the dataset using source_size, even it the method only uses the target data
+    (decision based on the experiments setup - check paper for more info).
+    it sses seed to ensure reprodubility(same seed will generate same dataset). Recommends: use b as seed.
+
+    :param data_x: np.matrix
+    :param data_t: np.array
+    :param data_y: np.array
+    :param data_x_source: np.matrix (optional)
+    :param seed: integer
+    :param source_size: proportion, in[0,1]
+    :param test_size: proportion, in[0,1]
+    :param use_validation: bool
+    :param use_source:bool
+    :return: DataTarget or DataTargetAndSource class
+    """
     if use_source:
         logger.debug('... combining source and target domains data.')
 
@@ -139,6 +153,7 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
         y = np.concatenate([np.zeros(n_source).reshape(-1,1), t_y.reshape(-1,1)], axis=0)
         d = np.concatenate([np.zeros(n_source), np.ones(n_target)], axis=0)
 
+        np.random.seed(seed)
         permutation = np.random.permutation(len(y))
         x = x[permutation]
         t = t[permutation]
@@ -170,8 +185,7 @@ def make_gwas(params, unit_test=False):
     :param
         params: dictionary with dataset parameters. keys: sample_size, covariates_size
     :return
-        data_s: DataSource class, unlabeled covariates
-        data_t: DataTarget class, labeled (with treatment assigment and outcome) covariates
+        data: DataSource class
     """
     # Adding default values
     _key = {'n_sample': 10000, 'n_covariates': 1000, 'n_treatments': 1, 'use_validation': False,
@@ -186,7 +200,7 @@ def make_gwas(params, unit_test=False):
                                               n_causes=params["n_treatments"] + params['n_covariates'],
                                               true_causes=params["n_treatments"],
                                               unit_test=unit_test)
-    data_x, data_y, data_t, tau = data_setting.generate_samples(prop=[0.4, 0.2, 0.35])
+    data_x, data_y, data_t, tau = data_setting.generate_samples(prop=[0.4, 0.2, 0.35])  # prop is internal from GWAS.
 
     if params['use_overlap_knob']:
         logger.debug('...adding overlap')
@@ -203,7 +217,7 @@ def make_gwas(params, unit_test=False):
                      data_y=data_y,
                      data_t=data_t,
                      seed=seed,
-                     source_size=0.2,
+                     source_size=params['source_size_p'],
                      use_validation=params['use_validation'],
                      use_source=params['use_source'])
     return data, tau[0]  # treatment_effects[treatment_columns]
@@ -211,7 +225,7 @@ def make_gwas(params, unit_test=False):
 
 def make_ihdp(params):
     seed = params['seed']
-    assert 1 <= seed <= 10, 'Seed/Id out of range (0-10)'
+    assert 1 <= seed <= 10, 'Seed/Id out of range (0-10) ---'+str(seed)
     data_setting = bcdata.ihdp_data(path='/content/data/ihdp/', id=seed)
     data_x, data_y, data_t, tau = data_setting.generate_samples()
 
@@ -219,7 +233,7 @@ def make_ihdp(params):
                      data_y=data_y,
                      data_t=data_t,
                      seed=seed,
-                     source_size=0.2,
+                     source_size=params['source_size_p'],
                      use_validation=params['use_validation'],
                      use_source=params['use_source'])
 

@@ -72,6 +72,8 @@ def _check_params_consistency(params):
     params['repetitions'] = params.get('repetitions', 10)
     params['ate_method_list'] = params.get('ate_method_list', ['naive', 'ipw'])
     params['episilon'] = params.get('episilon', 0.005)  # Used only for dragonnet (Targeted Loss).
+    params['source_size_p'] = params.get('source_size_p', 0.2)
+    params['weight_1'] = params.get('weight_1', 1)
 
     assert params['data_name'] in valid_data_names, 'data_name not implemented!'
     assert params['model_name'] in valid_model_names, 'model_name not implemented!'
@@ -107,6 +109,7 @@ def _check_params_consistency(params):
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', True)
         params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
+        params['filter_d'] = False
     elif params['model_name'] == 'bdragonnet':
         params['max_epochs'] = params.get('max_epochs', 50)
         params['batch_size'] = params.get('batch_size', 50)
@@ -124,6 +127,7 @@ def _check_params_consistency(params):
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', False)
         params['forward_passes'] = params.get('forward_passes', 10)  # Used only for bdragonnet and batle.
+        params['filter_d'] = False
     elif params['model_name'] == 'aipw':
         assert 'n_covariates' in params, 'n_covariates missing'
         params['max_epochs'] = params.get('max_epochs', 50)
@@ -136,6 +140,7 @@ def _check_params_consistency(params):
         params['shuffle'] = params.get('shuffle', False)
         params['alpha'] = params.get('alpha', [1, 1, 1])
         params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
+        params['filter_d'] = False
     elif params['model_name'] == 'batle':
         params['max_epochs'] = params.get('max_epochs', 50)
         params['batch_size'] = params.get('batch_size', 50)
@@ -153,6 +158,8 @@ def _check_params_consistency(params):
         params['shuffle'] = params.get('shuffle', False)
         params['type_original'] = params.get('type_original', False)
         params['forward_passes'] = params.get('forward_passes', 10)  # Used only for bdragonnet and batle.
+        params['filter_d'] = True
+        params['weight_1'] = 2
     else:
         logger.debug('%s not implemented', params['model_name'])
 
@@ -169,7 +176,8 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                     batch_size=200, lr=0.01, weight_decay=0.01, units1=100, units2=50, units3=1,
                     n_sample=5000, n_covariates=1000, use_validation=False, use_tensorboard=False,
                     use_source=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1,
-                    seed=1, alpha=[1, 1, 1], config_name='configA', ate_method_list=['naive']):
+                    seed=1, alpha=[1, 1, 1], config_name='configA', ate_method_list=['naive'],
+                    repetitions=3):
     """
     Function for testing, creates params dictionary withouh the yaml files.
     """
@@ -177,7 +185,8 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
     params = {'data_name': data_name, 'model_name': model_name,
               'seed': seed, 'config_name': config_name,
               'use_tensorboard': use_tensorboard,
-              'ate_method_list': ate_method_list}
+              'ate_method_list': ate_method_list,
+              'repetitions': repetitions}
 
     if params['data_name'] == 'gwas':
         params = _make_parameters_data_gwas(params=params,

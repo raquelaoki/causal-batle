@@ -99,13 +99,32 @@ def fit_wrapper(params,
                 loader_val=None,
                 use_tensorboard=False,
                 use_validation=False):
+    """ Wrap all model trainign functions.
+    1. Call make_model() to create model, criterion, metrics,fit function and ate estimators.
+    2. Set optimizer.
+    3. Call fit()
+    4. Call ate()
+
+    :param params: dictionary with model and data parameters
+    :param loader_train: pytorch DataLoader obj
+    :param loader_test: pytorch DataLoader obj
+    :param loader_all: pytorch DataLoader obj
+    :param loader_val: pytorch DataLoader obj (Optional)
+    :param use_tensorboard: Bool
+    :param use_validation: Bool
+    :return metrics: dictionary with metrics
+    :return loss: dictionary with losses
+    :return ate_estimated: dictionary with estimated ate
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     np.random.seed(params['seed'])
+    torch.manual_seed(params['seed'])
 
     logger.debug("...fitting %s", params['model_name'])
     logger.debug("...using %s", device)
 
+    # TODO: implement or remove
     if use_validation:
         best_metric_y_val = 999
         best_epoch = 0
@@ -142,7 +161,8 @@ def fit_wrapper(params,
                                path_logger=path_logger,
                                config_name=params['config_name'],
                                home_dir=params['home_dir'],
-                               episilon=params['episilon'],
+                               episilon=params['episilon'],  # Only used by dragonnet
+                               weight_1=params['weight_1']  # Only used by causal batle
                                )
 
     logger.debug("...calculating ate")
@@ -152,6 +172,7 @@ def fit_wrapper(params,
                         model=model,
                         ate_method_list=params['ate_method_list'],
                         device=device,
-                        forward_passes=params['forward_passes'])
+                        forward_passes=params['forward_passes'],
+                        filter_d=params['filter_d'])
     logger.debug("...Model done!")
     return metrics, loss, ate_estimated

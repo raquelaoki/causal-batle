@@ -11,7 +11,8 @@ from helper_parameters import parameter_debug
 import unittest
 import logging
 import math
-from utils import run_model
+from utils import run_model, repeat_experiment
+
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -22,12 +23,12 @@ class DataPrep(unittest.TestCase):
         logger.debug('Test 1: GWAS and Dragonnet creation')
         params = parameter_debug(max_epochs=2, n_covariates=100, n_sample=1000,
                                  lr=0.01, batch_size=20, weight_decay=0.01, use_validation=True,
-                                 units1=10, units2=5, dropout_p=0.5,
-                                 use_overlap_knob=True, overlap_knob=0.5,
+                                 units1=10, units2=5, dropout_p=0.5, use_overlap_knob=True, overlap_knob=0.5,
+                                 repetitions=1
                                  )
 
         metrics, loss, ate, tau = run_model(params)
-        self.assertFalse(math.isnan(ate['ate_naive_train']), "GWAS+Dragonnet failed")
+        self.assertFalse(math.isnan(ate['ate_naive_train']), "GWAS+Dragonnet failed (1 repetitions)")
 
     def test_idhp_aipw(self):
         logger.debug('Test : IHDP and AIPW')
@@ -35,25 +36,26 @@ class DataPrep(unittest.TestCase):
                                  use_tensorboard=True, max_epochs=2, ate_method_list=['aipw'],
                                  config_name='unit_test')
         metrics, loss, ate, tau = run_model(params)
-        self.assertFalse(math.isnan(ate['ate_aipw_train']), 'IHDP+AIPW failed.')
+        self.assertFalse(math.isnan(ate['ate_aipw_train']), 'IHDP+AIPW failed (default repetitions)')
 
     def test_ihdp_bdragonnet(self):
         logger.debug('Test: IHDP and Bayesian Dragonnet')
         params = parameter_debug(
             data_name='ihdp', model_name='bdragonnet', use_validation=True,
             use_tensorboard=False, max_epochs=2, ate_method_list=['naive', 'ipw', 'aipw'],
-            config_name='unit_test', alpha=[1,1,0]
+            config_name='unit_test', alpha=[1, 1, 0], repetitions=1,
         )
-        metrics, loss, ate, tau = run_model(params)
-        self.assertFalse(math.isnan(ate['ate_aipw_train']), 'IHDP+AIPW failed.')
+        #metrics, loss, ate, tau = run_model(params)
+        table = repeat_experiment(params)
+        self.assertFalse(math.isnan(table['ate_aipw_train'].values[0]), 'IHDP+AIPW failed.')
 
     def test_gwas_batle(self):
         logger.debug('Test: GWAS anc Causal-Batle')
         params = parameter_debug(
             data_name='gwas', model_name='batle', max_epochs=2, batch_size=200,
             use_validation=True, ate_method_list=['naive', 'ipw', 'aipw'],
-            config_name='unit_test', lr=0.001, weight_decay=0.05, alpha=[1,1,1,1,1],
-            use_source=True
+            config_name='unit_test', lr=0.001, weight_decay=0.05, alpha=[1, 1, 1, 1, 1],
+            use_source=True, repetitions=5,
         )
         metrics, loss, ate, tau = run_model(params)
         self.assertFalse(math.isnan(ate['ate_aipw_train']), 'GWAS anc Causal-Batle failed.')

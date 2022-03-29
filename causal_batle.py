@@ -148,7 +148,8 @@ def fit_causal_batle(epochs,
                      path_logger='',
                      config_name='',
                      home_dir='',
-                     episilon=None):
+                     episilon=None,
+                     weight_1=1):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
     :param home_dir:
@@ -206,14 +207,14 @@ def fit_causal_batle(epochs,
                      'backbone.dragonnet_head.head_layer2_2_0',
                      'backbone.dragonnet_head.head_layer2_1_1',
                      'backbone.dragonnet_head.head_layer2_2_1',
-                      'backbone.dragonnet_head.outcome_layer_0.mu',
-                      'backbone.dragonnet_head.outcome_layer_0.sigma',
+                     'backbone.dragonnet_head.outcome_layer_0.mu',
+                     'backbone.dragonnet_head.outcome_layer_0.sigma',
                      'backbone.dragonnet_head.outcome_layer_1.mu',
-                      'backbone.dragonnet_head.outcome_layer_1.sigma',
+                     'backbone.dragonnet_head.outcome_layer_1.sigma',
                      'backbone.dragonnet_head.t_predictions.logits',
-                      'backbone.dragonnet_head.head_layer_d',
+                     'backbone.dragonnet_head.head_layer_d',
                      'backbone.dragonnet_head.d_predictions',
-                    'backbone.dragonnet_head.decoder_layer.decoder_layer1_1',
+                     'backbone.dragonnet_head.decoder_layer.decoder_layer1_1',
                      'backbone.dragonnet_head.decoder_layer.decoder_layer1_2',
                      'backbone.dragonnet_head.decoder_layer.decoder_layer1_3',
                      ]
@@ -232,9 +233,10 @@ def fit_causal_batle(epochs,
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
             lb_t, lb_y, lb_d, lb_r, _ = _calculate_criterion_causalbatle(batch=batch,
-                                                                            criterion_function=criterion,
-                                                                            predictions=predictions,
-                                                                            device=device)
+                                                                         criterion_function=criterion,
+                                                                         predictions=predictions,
+                                                                         device=device,
+                                                                         weight_1=weight_1)
             loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_d + alpha[3] * lb_r
             loss_batch.backward()
             optimizer.step()
@@ -243,9 +245,10 @@ def fit_causal_batle(epochs,
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
             _, _, _, _, lb_a = _calculate_criterion_causalbatle(batch=batch,
-                                                                            criterion_function=criterion,
-                                                                            predictions=predictions,
-                                                                            device=device)
+                                                                criterion_function=criterion,
+                                                                predictions=predictions,
+                                                                device=device,
+                                                                weight_1=weight_1)
             loss_adv = alpha[4] * lb_a
             loss_adv.backward()
             for name, layer in model.named_modules():
@@ -279,7 +282,7 @@ def fit_causal_batle(epochs,
 
         # print('epoch', e, loss_train_t[e], loss_train_y[e])
         if use_validation:
-            lm_val = _calculate_loss_metric_noopti(model=model, loader=loader_val,  device=device,
+            lm_val = _calculate_loss_metric_noopti(model=model, loader=loader_val, device=device,
                                                    criterion=criterion, metric_functions=metric_functions)
             loss_val_t[e], loss_val_y[e] = lm_val['loss_t'], lm_val['loss_y']
             loss_val_d[e], loss_val_r[e] = lm_val['loss_d'], lm_val['loss_r']
@@ -371,8 +374,8 @@ def _calculate_loss_metric_noopti(model, loader, device, criterion, metric_funct
     return output
 
 
-def _calculate_criterion_causalbatle(criterion_function, batch, predictions, device='cpu'):
-    loss_t = criterion_function[0](batch=batch, predictions=predictions, device=device)
+def _calculate_criterion_causalbatle(criterion_function, batch, predictions, device='cpu', weight_1=1):
+    loss_t = criterion_function[0](batch=batch, predictions=predictions, device=device, weight_1=weight_1)
     loss_y = criterion_function[1](batch=batch, predictions=predictions, device=device)
     loss_d = criterion_function[2](batch=batch, predictions=predictions, device=device)
     loss_r = criterion_function[3](batch=batch, predictions=predictions, device=device)
@@ -388,11 +391,18 @@ def _calculate_metric_causalbatle(metric_functions, batch, predictions):
     return metrics_t, metrics_y, metrics_d, metrics_r
 
 
-def criterion_function_t(batch, predictions, device='cpu'):
+def criterion_function_t(batch, predictions, device='cpu', weight_1=None):
     t_predictions = predictions['t']
-    t_obs = batch[2].to(device)
-    d_obs = batch[2].to(device)
-    return -t_predictions.log_prob(t_obs[d_obs == 1]).mean()
+    d_obs = batch[3].to(device)
+
+    t_obs = batch[2].to(device)#[d_obs == 1]
+    # Weights
+    loss = -t_predictions.log_prob(t_obs)
+    loss = loss[d_obs == 1]
+
+    weights = [weight_1 if item == 0 else 1 for item in t_obs[d_obs == 1]]
+    loss = torch.mul(loss, torch.Tensor(weights))
+    return loss.mean()
 
 
 def criterion_function_y(batch, predictions, device='cpu'):
@@ -457,5 +467,3 @@ def metric_function_discriminator(batch, predictions):
 def metric_function_reconstruction(batch, predictions):
     reconstruction = predictions['xr'].detach().numpy().reshape(-1, 1)
     return mean_squared_error(batch[0].reshape(-1, 1), reconstruction)
-
-

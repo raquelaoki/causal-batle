@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class TensorboardWriter:
     def __init__(self, path_logger, config_name, home_dir='/content'):
         date = self.get_date()
-        full_path = home_dir + "/" + path_logger + "/" + config_name + "/" + date + "/"
+        full_path = home_dir + "/" + path_logger + "/" + config_name + "_" + date + "/"
         logger.debug('Tensorboard folder path - %s', full_path)
         self.writer = SummaryWriter(log_dir=full_path)
 

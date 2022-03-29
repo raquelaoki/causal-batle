@@ -131,8 +131,9 @@ def fit_aipw(epochs,
              path_logger='',
              config_name='',
              home_dir='',
-             alpha=[],
-             episilon=None):
+             alpha=[2,1,1],
+             episilon=None,
+             weight_1=1):
     logger.debug('...starting')
 
     # use prefetch_generator and tqdm for iterating through data
@@ -173,7 +174,7 @@ def fit_aipw(epochs,
                 batch=batch,
                 predictions=predictions)
 
-            loss_batch = loss_batch_t * 20 + loss_batch_y0 + loss_batch_y1
+            loss_batch = loss_batch_t*alpha[0] + loss_batch_y0*alpha[1] + loss_batch_y1*alpha[2]
             loss_batch.backward()
             optimizer.step()
 
@@ -267,7 +268,8 @@ def fit_aipw_three_opt(epochs,
                        path_logger='',
                        config_name='',
                        home_dir='',
-                       alpha=[]):
+                       alpha=[],
+                       weight_1=1):
     logger.debug('...starting')
 
     # use prefetch_generator and tqdm for iterating through data
@@ -418,7 +420,7 @@ def epoch_opt(model, epochs, loader_train, loader_val, device, optimizer, criter
 
 
 def _freeze_layers(model, alpha):
-    layers = ['logisticRegression','linearRegression_0','linearRegression_1']
+    layers = ['logisticRegression', 'linearRegression_0', 'linearRegression_1']
     to_freeze = []
     for i, item in enumerate(alpha):
         if item == 1:

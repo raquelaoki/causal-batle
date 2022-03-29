@@ -234,7 +234,8 @@ def fit_dragonnet(epochs,
                   path_logger='',
                   config_name='',
                   home_dir='',
-                  episilon=0.001):
+                  episilon=0.001,
+                  weight_1=1):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
     :param episilon:
