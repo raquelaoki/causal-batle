@@ -30,6 +30,7 @@ def run_model(params, model_seed=0):
     2. Make data loaders.
     3. Call fit_wrapper (make model, fits, estimate ate)
     :param params: dictionary
+    :param model_seed: int
     :return metrics, loss and ate dictionaries, tau (true treatment effect value)
     """
     data, tau = make_data(params)

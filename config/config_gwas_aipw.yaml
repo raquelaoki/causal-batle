@@ -1,0 +1,13 @@
+parameters:
+    data_name: 'gwas'
+    model_name: 'aipw'
+    config_name: 'gwas_aipw'
+    ate_method_list: ['naive','aipw']
+    repetitions: 5
+    seed: 5
+    max_epochs: 100
+    batch_size: 50
+    lr: 0.01
+    weight_decay: 0.0005
+    use_validation: False
+    use_tensorboard: False

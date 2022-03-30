@@ -8,8 +8,6 @@ __pycache__/
 # Baselines repo
 ucate/
 CompBioAndSimulated_Datasets/
-data/
-config/
 
 # Unit test / coverage reports
 .cache

@@ -1,0 +1,19 @@
+parameters:
+    data_name: 'gwas'
+    model_name: 'dragonnet'
+    config_name: 'gwas_dragonnet'
+    ate_method_list: [ 'naive','aipw' ]
+    repetitions: 5
+    seed: 5
+    max_epochs: 100
+    batch_size: 50
+    units1: 200
+    units2: 100
+    lr: 0.001
+    weight_decay: 0.05
+    dropout_p: 0.5
+    alpha: [1,1.5,0.2]
+    use_validation: False
+    use_dropout: False
+    use_tensorboard: False
+    episilon: 0.005
