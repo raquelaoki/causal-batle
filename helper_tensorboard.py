@@ -7,6 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 class TensorboardWriter:
+    """Creates tensorboard.
+    One folder per config/b/seed
+    """
     def __init__(self, path_logger, config_name, home_dir='/content'):
         date = self.get_date()
         full_path = home_dir + "/" + path_logger + "/" + config_name + "_" + date + "/"
@@ -27,7 +30,7 @@ class TensorboardWriter:
         self.writer.flush()
 
 
-def update_tensorboar(writer_tensorboard, values, e, set='train'):
+def update_tensorboar(writer_tensorboard, values, e):
     for key in values.keys():
         writer_tensorboard.add_scalar(key, values[key], e)
     writer_tensorboard.end_writer()

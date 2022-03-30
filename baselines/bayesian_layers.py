@@ -49,14 +49,14 @@ def criterion_function_dragonnet_y(batch, predictions, device='cpu'):
 
 
 def metric_function_dragonnet_t(batch, predictions):
-    dif = batch[2] - predictions['t'].mean
-    return np.abs(dif.detach().numpy()).mean()
+    dif = batch[2] - predictions['t'].mean.cpu().detach().numpy()
+    return np.abs(dif).mean()
 
 
 def metric_function_dragonnet_y(batch, predictions):
-    pred0 = predictions['y0'].sample([1,1]).reshape(-1,1)
-    pred1 = predictions['y1'].sample([1,1]).reshape(-1,1)
-    t_obs = batch[2]
+    pred0 = predictions['y0'].sample([1,1]).reshape(-1,1).cpu().detach().numpy()
+    pred1 = predictions['y1'].sample([1,1]).reshape(-1,1).cpu().detach().numpy()
+    t_obs = batch[2].cpu().detach().numpy()
     y_pred = pred0 * (1 - t_obs) + pred1 * t_obs
-    return mean_squared_error(batch[1], y_pred.detach().numpy())
+    return mean_squared_error(batch[1], y_pred)
 

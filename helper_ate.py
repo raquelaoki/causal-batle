@@ -22,11 +22,11 @@ def calculate_ate(loader_train, loader_test, loader_all, model,
     :return:
     """
     ate_train = _per_set_ate(loader_train, model, make_predictions=_make_predictions_regular,
-                             methods_list=ate_method_list, loader_name='train')
+                             methods_list=ate_method_list, loader_name='train', device=device)
     ate_test = _per_set_ate(loader_test, model, make_predictions=_make_predictions_regular,
-                            methods_list=ate_method_list, loader_name='test')
+                            methods_list=ate_method_list, loader_name='test', device=device)
     ate_all = _per_set_ate(loader_all, model, make_predictions=_make_predictions_regular,
-                           methods_list=ate_method_list, loader_name='all')
+                           methods_list=ate_method_list, loader_name='all', device=device)
 
     ate_estimated = {}
     ate_estimated.update(ate_all)
@@ -64,11 +64,11 @@ def _make_predictions_regular(data_loader, model, device, place_holder, filter_d
     for i, batch in enumerate(data_loader):
         y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
         t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
-        predictions = model(batch[0])
+        predictions = model(batch[0].to(device))
         t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
-        y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.detach().numpy().reshape(-1)], 0)
-        y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.detach().numpy().reshape(-1)], 0)
-        t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.detach().numpy().reshape(-1)], 0)
+        y0_pred = np.concatenate([y0_pred.reshape(-1), y0_predictions.cpu().detach().numpy().reshape(-1)], 0)
+        y1_pred = np.concatenate([y1_pred.reshape(-1), y1_predictions.cpu().detach().numpy().reshape(-1)], 0)
+        t_pred = np.concatenate([t_pred.reshape(-1), t_predictions.cpu().detach().numpy().reshape(-1)], 0)
     return t_pred, y0_pred, y1_pred, t_obs, y_obs
 
 
@@ -89,17 +89,17 @@ def _make_predictions_dropout(data_loader, model, device, forward_passes, filter
 
         predictions = model(batch[0].to(device))
         t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
-        y0_pred = y0_predictions.mean.detach().numpy().reshape(-1, 1)
-        y1_pred = y1_predictions.mean.detach().numpy().reshape(-1, 1)
-        t_pred = t_predictions.mean.detach().numpy().reshape(-1, 1)
+        y0_pred = y0_predictions.mean.cpu().detach().numpy().reshape(-1, 1)
+        y1_pred = y1_predictions.mean.cpu().detach().numpy().reshape(-1, 1)
+        t_pred = t_predictions.mean.cpu().detach().numpy().reshape(-1, 1)
 
         # Make more predictions in the same batch.
         for j in range(forward_passes - 1):
             predictions = model(batch[0].to(device))
             t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
-            y0_pred = np.concatenate([y0_pred, y0_predictions.mean.detach().numpy().reshape(-1, 1)], 1)
-            y1_pred = np.concatenate([y1_pred, y1_predictions.mean.detach().numpy().reshape(-1, 1)], 1)
-            t_pred = np.concatenate([t_pred, t_predictions.mean.detach().numpy().reshape(-1, 1)], 1)
+            y0_pred = np.concatenate([y0_pred, y0_predictions.mean.cpu().detach().numpy().reshape(-1, 1)], 1)
+            y1_pred = np.concatenate([y1_pred, y1_predictions.mean.cpu().detach().numpy().reshape(-1, 1)], 1)
+            t_pred = np.concatenate([t_pred, t_predictions.mean.cpu().detach().numpy().reshape(-1, 1)], 1)
 
         # Mean of predictions.
         y0_pred = np.mean(y0_pred, axis=1)
@@ -186,7 +186,7 @@ def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
     ite_prop0 = (1 - t_obs) * (y_obs - y0_pred) / (1 - t_pred)
     ite = ite_dif + ite_prop1 - ite_prop0
 
-    print('pred - t', np.mean(t_pred[t_obs == 1]), np.mean(t_pred[t_obs == 0]), sum(t_obs) , len(t_obs))
+    #print('pred - t', np.mean(t_pred[t_obs == 1]), np.mean(t_pred[t_obs == 0]), sum(t_obs) , len(t_obs))
 
     return np.mean(ite)
 

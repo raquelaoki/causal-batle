@@ -24,7 +24,7 @@ def make_data(params):
         return hd.make_ihdp(params)
 
 
-def run_model(params):
+def run_model(params, model_seed=0):
     """ Given a set of parameters, it run the model.
     1. Creates the dataset (use seed for stability/reproducibility across several models).
     2. Make data loaders.
@@ -35,16 +35,22 @@ def run_model(params):
     data, tau = make_data(params)
 
     tloader_train, tloader_val, tloader_test, tloader_all = data.loader(batch=params['batch_size'],
-                                                                        seed=0
+                                                                        seed=params['seed']
                                                                         )
-    metrics, loss, ate = hfit.fit_wrapper(params=params,
-                                          loader_train=tloader_train,
-                                          loader_test=tloader_test,
-                                          loader_all=tloader_all,
-                                          loader_val=tloader_val,
-                                          use_validation=params['use_validation'],
-                                          use_tensorboard=params['use_tensorboard'])
-
+    success = False
+    while not success:
+        try:
+            metrics, loss, ate = hfit.fit_wrapper(params=params,
+                                                  loader_train=tloader_train,
+                                                  loader_test=tloader_test,
+                                                  loader_all=tloader_all,
+                                                  loader_val=tloader_val,
+                                                  use_validation=params['use_validation'],
+                                                  use_tensorboard=params['use_tensorboard'],
+                                                  model_seed=model_seed)
+            success = True
+        except ValueError:
+            params['seed'] = params['seed'] + 1
     return metrics, loss, ate, tau
 
 
@@ -106,15 +112,19 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     print(params['model_name'])
     b = params['repetitions']
 
-    for i in range(b):
-        params['seed'] = i+1
-        params['config_name'] = params['data_name'] + '_' + params['model_name']
-        params['config_name'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
-        if use_range_source_p:
-            table = range_source_p(params, table, source_size_p, b=i)
-        else:
-            metrics, loss, ate, tau = run_model(params)
-            table = organize(params, ate, tau, table, b=i)
+    n_seeds = params['seed']
+
+    for seed in range(n_seeds):
+        params['seed'] = seed + 1
+        for i in range(b):
+            params['config_name'] = params['data_name'] + '_' + params['model_name']
+            params['config_name'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
+            if use_range_source_p:
+                table = range_source_p(params, table, source_size_p, b=i + 50)
+            else:
+                print('starting model...')
+                metrics, loss, ate, tau = run_model(params, model_seed=i + 50)
+                table = organize(params, ate, tau, table, b=i)
     return table
 
 
@@ -134,10 +144,14 @@ def range_source_p(params, table, source_size_p=None, b=1):
         source_size_p = [0.2, 0.4, 0.6, 0.8]
     else:
         assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
-
+    config = params['config_name']
     for p in source_size_p:
+        params['config_name'] = config + '_' + str(p)
         params['source_size_p'] = p
-        metrics, loss, ate, tau = run_model(params)
+        if params['model_name'] == 'batle':
+            if p > 0.6:
+                params['alpha'] = [1, 4, 1, 1, 4]
+        metrics, loss, ate, tau = run_model(params, model_seed=b)
         table = organize(params, ate, tau, table, b=b)
 
     return table

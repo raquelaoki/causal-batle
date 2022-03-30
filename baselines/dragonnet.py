@@ -42,7 +42,6 @@ class dragonnet(nn.Module):
         self.representation_layer1_1 = nn.Linear(in_features=n_covariates, out_features=self.units1)
         self.representation_layer1_2 = nn.Linear(in_features=self.units1, out_features=self.units1)
         self.representation_layer1_3 = nn.Linear(in_features=self.units1, out_features=self.units1)
-
         self.type_original = type_original
         if self.type_original:
             self.dragonnet_head = dragonnet_head(self.units1, self.units2, self.units3,
@@ -72,7 +71,6 @@ class dragonnet(nn.Module):
 
         :return:
         """
-
         # Shared presentation.
         x = self.elu(self.representation_layer1_1(self.dropout(inputs)))
         x = self.elu(self.representation_layer1_2(self.batchnorm(x)))
@@ -142,13 +140,15 @@ class dragonnet_head(nn.Module):
 
 
 def metric_function_dragonnet_t(batch, predictions):
-    return roc_auc_score(batch[2], predictions['t'].detach().numpy())
+    return roc_auc_score(batch[2], predictions['t'].cpu().detach().numpy())
 
 
 def metric_function_dragonnet_y(batch, predictions):
-    t_obs = batch[2]
-    y_pred = predictions['y0'] * (1 - t_obs) + predictions['y1'] * t_obs
-    return mean_squared_error(batch[1], y_pred.detach().numpy())
+    t_obs = batch[2].cpu().detach().numpy()
+    pred0 = predictions['y0'].cpu().detach().numpy()
+    pred1 = predictions['y1'].cpu().detach().numpy()
+    y_pred = pred0 * (1 - t_obs) + pred1 * t_obs
+    return mean_squared_error(batch[1], y_pred)
 
 
 def criterion_function_dragonnet_targeted(batch, predictions, device='cpu', episilon=0.001):
@@ -350,10 +350,10 @@ def fit_dragonnet(epochs,
             values = {'loss_train_t': loss_train_t[e], 'loss_train_y': loss_train_y[e],
                       'loss_train_ty': loss_train_ty[e], 'metric_train_t': metric_train_t[e],
                       'metric_train_y': metric_train_y[e]}
-            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='train')
+            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
             values = {'loss_val_t': loss_val_t[e], 'loss_val_y': loss_val_y[e], 'loss_val_ty': loss_val_ty[e],
                       'metric_val_t': metric_val_t[e], 'metric_val_y': metric_val_y[e]}
-            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
+            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
 
     # Change model to eval mode
     model.eval()

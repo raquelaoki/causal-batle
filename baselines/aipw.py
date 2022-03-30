@@ -65,11 +65,11 @@ class aipw(nn.Module):
 
 def metric_function_aipw_y(batch, predictions, base):
     t_obs = batch[2]
-    return mean_squared_error(batch[1][t_obs==base], predictions['y'+str(base)].detach().numpy()[t_obs==base])
+    return mean_squared_error(batch[1][t_obs==base], predictions['y'+str(base)].cpu().detach().numpy()[t_obs==base])
 
 
 def metric_function_aipw_t(batch, predictions):
-    return roc_auc_score(batch[2], predictions['t'].detach().numpy())
+    return roc_auc_score(batch[2], predictions['t'].cpu().detach().numpy())
 
 
 def criterion_function_aipw_y(batch, predictions, device='cpu', base=0):
@@ -213,11 +213,11 @@ def fit_aipw(epochs,
             values = {'loss_train_t': loss_train_t[e], 'loss_train_y0': loss_train_y0[e],
                       'loss_train_y1': loss_train_y1[e], 'metric_train_t': metric_train_t[e],
                       'metric_train_y0': metric_train_y0[e], 'metric_train_y1': metric_train_y1[e]}
-            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='train')
+            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
             values = {'loss_val_t': loss_val_t[e], 'loss_val_y0': loss_val_y0[e],
                       'loss_val_y1': loss_val_y1[e], 'metric_val_t': metric_val_t[e],
                       'metric_val_y0': metric_val_y0[e], 'metric_val_y1': metric_val_y1[e]}
-            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
+            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
 
     model.eval()
 

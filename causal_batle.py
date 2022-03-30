@@ -280,7 +280,7 @@ def fit_causal_batle(epochs,
         metric_train_d[e] = np.nanmean(_metrics_d)
         metric_train_r[e] = np.nanmean(_metrics_r)
 
-        # print('epoch', e, loss_train_t[e], loss_train_y[e])
+        print('epoch', e, loss_train_t[e], loss_train_y[e])
         if use_validation:
             lm_val = _calculate_loss_metric_noopti(model=model, loader=loader_val, device=device,
                                                    criterion=criterion, metric_functions=metric_functions)
@@ -300,12 +300,12 @@ def fit_causal_batle(epochs,
                       'metric_train_t': metric_train_t[e], 'metric_train_y': metric_train_y[e],
                       'metric_train_d': metric_train_d[e], 'metric_train_r': metric_train_r[e],
                       }
-            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='train')
+            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
             values = {'loss_val_t': loss_val_t[e], 'loss_val_y': loss_val_y[e],
                       'loss_val_d': loss_val_d[e], 'loss_val_r': loss_val_r[e], 'loss_val_a': loss_val_a[e],
                       'metric_val_t': metric_val_t[e], 'metric_val_y': metric_val_y[e],
                       'metric_val_d': metric_val_d[e], 'metric_val_r': metric_val_r[e]}
-            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e, set='val')
+            writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
 
     # Calculating metrics on testing set - no dropout used here.
     lm_test = _calculate_loss_metric_noopti(model=model, loader=loader_test,
@@ -401,17 +401,17 @@ def criterion_function_t(batch, predictions, device='cpu', weight_1=None):
     loss = loss[d_obs == 1]
 
     weights = [weight_1 if item == 0 else 1 for item in t_obs[d_obs == 1]]
-    loss = torch.mul(loss, torch.Tensor(weights))
+    loss = torch.mul(loss, torch.Tensor(weights).to(device))
     return loss.mean()
 
 
 def criterion_function_y(batch, predictions, device='cpu'):
     y0_predictions, y1_predictions = predictions['y0'], predictions['y1']
     y_obs = batch[1].to(device)
-    t_obs = batch[2].to(device)
-    d_obs = batch[3].to(device)
-    mask0 = np.logical_and(t_obs == 0, d_obs == 1).to(dtype=torch.bool)
-    mask1 = np.logical_and(t_obs == 1, d_obs == 1).to(dtype=torch.bool)
+    #t_obs = batch[2].to(device)
+    #d_obs = batch[3].to(device)
+    mask0 = np.logical_and(batch[2] == 0, batch[3] == 1).to(torch.bool).to(device)
+    mask1 = np.logical_and(batch[2] == 1, batch[3] == 1).to(torch.bool).to(device)
     loss_y0_babch = -y0_predictions.log_prob(y_obs[mask0]).mean()
     loss_y1_babch = -y1_predictions.log_prob(y_obs[mask1]).mean()
     if mask1.sum() == 0:
@@ -461,9 +461,9 @@ def criterion_function_adversarial(batch, predictions, device='cpu'):
 
 
 def metric_function_discriminator(batch, predictions):
-    return roc_auc_score(batch[3], predictions['d'].detach().numpy())
+    return roc_auc_score(batch[3], predictions['d'].cpu().detach().numpy())
 
 
 def metric_function_reconstruction(batch, predictions):
-    reconstruction = predictions['xr'].detach().numpy().reshape(-1, 1)
+    reconstruction = predictions['xr'].cpu().detach().numpy().reshape(-1, 1)
     return mean_squared_error(batch[0].reshape(-1, 1), reconstruction)

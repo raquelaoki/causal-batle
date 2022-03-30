@@ -98,7 +98,8 @@ def fit_wrapper(params,
                 loader_train, loader_test, loader_all,
                 loader_val=None,
                 use_tensorboard=False,
-                use_validation=False):
+                use_validation=False,
+                model_seed=0):
     """ Wrap all model trainign functions.
     1. Call make_model() to create model, criterion, metrics,fit function and ate estimators.
     2. Set optimizer.
@@ -117,9 +118,8 @@ def fit_wrapper(params,
     :return ate_estimated: dictionary with estimated ate
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    np.random.seed(params['seed'])
-    torch.manual_seed(params['seed'])
+    np.random.seed(model_seed)
+    torch.manual_seed(model_seed)
 
     logger.debug("...fitting %s", params['model_name'])
     logger.debug("...using %s", device)
