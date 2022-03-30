@@ -86,14 +86,6 @@ def make_model(params):
     return model, criterion, metric_functions, fit, ate
 
 
-# def _calculate_criterion(criterion_function, batch, predictions, device='cpu', set='train'):
-#    return criterion_function(batch, predictions, device=device, set=set)
-
-
-# def _calculate_metric(metric_function, batch, predictions):
-#    return metric_function(batch=batch, predictions)=predictions
-
-
 def fit_wrapper(params,
                 loader_train, loader_test, loader_all,
                 loader_val=None,
@@ -124,7 +116,7 @@ def fit_wrapper(params,
     logger.debug("...fitting %s", params['model_name'])
     logger.debug("...using %s", device)
 
-    # TODO: implement or remove
+    # TODO: implement
     if use_validation:
         best_metric_y_val = 999
         best_epoch = 0

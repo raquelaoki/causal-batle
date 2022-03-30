@@ -223,6 +223,7 @@ def _make_parameters_data_gwas(params,
                                n_treatments=1,
                                use_overlap_knob=False,
                                overlap_knob=1):
+    """Debuging function, create default values for parameters"""
     params['n_sample'] = n_sample
     params['n_covariates'] = n_covariates
     params['binary_target'] = binary_target
@@ -238,6 +239,7 @@ def _make_paramters_data_ihdp(params,
                               binary_target=False,
                               use_overlap_knob=False,
                               overlap_knob=1):
+    """Debuging function, create default values for parameters"""
     params['binary_target'] = binary_target
     params['use_overlap_knob'] = use_overlap_knob
     params['overlap_knob'] = overlap_knob
@@ -261,6 +263,7 @@ def _make_parameters_model_dragonnet_backbone(params,
                                               dropout_p=0,
                                               alpha=[1, 1, 1],
                                               use_source=False):
+    """Debuging function, create default values for parameters"""
     params['use_source'] = use_source
     params['shuffle'] = True
     params['batch_size'] = batch_size

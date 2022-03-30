@@ -51,6 +51,8 @@ def run_model(params, model_seed=0):
             success = True
         except ValueError:
             params['seed'] = params['seed'] + 1
+            model_seed = model_seed+1
+            print('...value error')
     return metrics, loss, ate, tau
 
 
@@ -100,7 +102,8 @@ def read_config_names(path):
     return config_files
 
 
-def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, source_size_p=None):
+def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, source_size_p=None,
+                      save=False, output_save='', previous=0):
     """ Repeat the experiment b times.
     This function perform b repetitions of (Dataset, Model, Ate) - set by the config/params file.
     :param params: dictinary
@@ -115,16 +118,18 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     n_seeds = params['seed']
 
     for seed in range(n_seeds):
-        params['seed'] = seed + 1
+        params['seed'] = seed + previous
         for i in range(b):
+            print('seed ', seed, ' b ', i)
             params['config_name'] = params['data_name'] + '_' + params['model_name']
             params['config_name'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
-                table = range_source_p(params, table, source_size_p, b=i + 50)
+                table = range_source_p(params, table, source_size_p, b=i + previous)
             else:
-                print('starting model...')
-                metrics, loss, ate, tau = run_model(params, model_seed=i + 50)
+                metrics, loss, ate, tau = run_model(params, model_seed=i + previous)
                 table = organize(params, ate, tau, table, b=i)
+        if save:
+            table.to_csv(output_save + '.csv', sep=',')
     return table
 
 
@@ -146,6 +151,7 @@ def range_source_p(params, table, source_size_p=None, b=1):
         assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
     config = params['config_name']
     for p in source_size_p:
+        print('...p ', p)
         params['config_name'] = config + '_' + str(p)
         params['source_size_p'] = p
         if params['model_name'] == 'batle':

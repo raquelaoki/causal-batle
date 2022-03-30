@@ -9,17 +9,18 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_ate(loader_train, loader_test, loader_all, model,
-                  ate_method_list=['naive', 'ipw', 'aipw'], device='cpu',
+                  ate_method_list=['naive', 'aipw'], device='cpu',
                   forward_passes=None, filter_d=False):
     """
-    :param loader_train:
-    :param loader_test:
-    :param loader_all:
-    :param model:
-    :param ate_method_list:
-    :param device:
+    :param loader_train: torch.utils.data.DataLoader obj.
+    :param loader_test: torch.utils.data.DataLoader obj.
+    :param loader_all:  torch.utils.data.DataLoader obj.
+    :param model: torch.nn Module.
+    :param ate_method_list: list with ATE methods' names.
+    :param device: cpu or cuda.
     :param forward_passes: None, it is only used for the bayesian version.
-    :return:
+    :param filter_d: None, it is only used for Causal-Batle version.
+    :return: dictionary with estimated ate in each loader x method.
     """
     ate_train = _per_set_ate(loader_train, model, make_predictions=_make_predictions_regular,
                              methods_list=ate_method_list, loader_name='train', device=device)
@@ -37,8 +38,19 @@ def calculate_ate(loader_train, loader_test, loader_all, model,
 
 
 def calculate_ate_bayesian(loader_train, loader_test, loader_all, model,
-                           ate_method_list=['naive', 'ipw', 'aipw'], device='cpu',
+                           ate_method_list=['naive', 'aipw'], device='cpu',
                            forward_passes=10, filter_d=False):
+    """
+    :param loader_train: torch.utils.data.DataLoader obj.
+    :param loader_test: torch.utils.data.DataLoader obj.
+    :param loader_all:  torch.utils.data.DataLoader obj.
+    :param model: torch.nn Module.
+    :param ate_method_list: list with ATE methods' names.
+    :param device: cpu or cuda.
+    :param forward_passes: number of forward passes for MC-dropout.
+    :param filter_d: None, it is only used for Causal-Batle version.
+    :return: dictionary with estimated ate in each loader x method.
+    """
     ate_train = _per_set_ate(loader_train, model, make_predictions=_make_predictions_dropout,
                              methods_list=ate_method_list, loader_name='train',
                              device=device, forward_passes=forward_passes, filter_d=filter_d)
@@ -58,6 +70,15 @@ def calculate_ate_bayesian(loader_train, loader_test, loader_all, model,
 
 
 def _make_predictions_regular(data_loader, model, device, place_holder, filter_d=False):
+    """Calculate predictions.
+
+    :param data_loader: torch.utils.data.DataLoader obj.
+    :param model: torch.nn Module.
+    :param device: cpu or cuda.
+    :param place_holder: .
+    :param filter_d: None, it is only used for Causal-Batle version.
+    :return: arrays with predictions
+    """
     y_obs, t_obs = np.array([]), np.array([])
     y0_pred, y1_pred, t_pred = np.array([]), np.array([]), np.array([])
 
@@ -76,11 +97,11 @@ def _make_predictions_dropout(data_loader, model, device, forward_passes, filter
     """
     Reference: (https://stackoverflow.com/questions/63285197/measuring-uncertainty-using-mc-dropout-on-pytorch)
 
-    :param data_loader:
-    :param model:
-    :param device:
-    :param forward_passes:
-    :return:
+    :param data_loader:torch.utils.data.DataLoader obj.
+    :param model:torch.nn Module.
+    :param device: cpu or cuda.
+    :param forward_passes: number of MC dropout forward passes.
+    :return: array with predictions.
     """
     y_obs, t_obs = np.array([]), np.array([])
     y0_pred_mean, y1_pred_mean, t_pred_mean = np.array([]), np.array([]), np.array([])
@@ -137,15 +158,20 @@ def _per_set_ate(data_loader,
                  filter_d=False):
     """
     Calculate the Average Treatment Effect
-    :param data_loader: if neural networks, needs to be a DataLoader objs
-    :param model: object
+    :param data_loader:torch.utils.data.DataLoader obj.
+    :param model:torch.nn Module.
+    :param make_predictions: function.
+    :param device: cpu or cuda.
+    :param methods_list: list with ate methods names to use.
+    :param loader_name: str, set name (train, all, test).
+    :param forward_passes: int.
+    :param filter_d: bool.
     """
 
     t_pred, y0_pred, y1_pred, t_obs, y_obs = make_predictions(data_loader, model, device, forward_passes,
                                                               filter_d=filter_d)
 
     implemented_methods = {'naive': _naive_ate,
-                           'ipw': _ipw_ate,
                            'aipw': _aipw_ate,
                            }
     estimated_ate = {}
@@ -160,34 +186,28 @@ def _per_set_ate(data_loader,
 
 
 def _naive_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
+    """Calculate ATE using naive formula."""
     ite = (y1_pred - y0_pred)
     return np.mean(_truncate_by_g(attribute=ite, g=t_pred, level=0.05))
 
 
 def _ipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
+    """Calculate ATE using IPW formula."""
     y0_pred, y1_pred, t_pred, t_obs, y_obs = _truncate_all_by_g(y0_pred, y1_pred, t_pred, t_obs, y_obs)
     ipw1 = y1_pred / t_pred
     ipw0 = y0_pred / (1.0 - t_pred)
-    # print('predi', y1_pred[t_obs == 1], y0_pred[t_obs == 0])
-    # print('predi - t', np.mean(t_pred[t_obs == 1]), np.mean(t_pred[t_obs == 0]))
-    # print('predi - ipw', ipw1[t_obs == 1], ipw0[t_obs == 0])
-
     ipw1 = np.mean(ipw1[t_obs == 1])
     ipw0 = np.mean(ipw0[t_obs == 0])
-    # print('averages ', ipw1, ipw0)
-
     return ipw1 - ipw0
 
 
 def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
+    """Calculate ATE using AIPW formula."""
     y0_pred, y1_pred, t_pred, t_obs, y_obs = _truncate_all_by_g(y0_pred, y1_pred, t_pred, t_obs, y_obs)
     ite_dif = (y1_pred - y0_pred)
     ite_prop1 = t_obs * (y_obs - y1_pred) / t_pred
     ite_prop0 = (1 - t_obs) * (y_obs - y0_pred) / (1 - t_pred)
     ite = ite_dif + ite_prop1 - ite_prop0
-
-    #print('pred - t', np.mean(t_pred[t_obs == 1]), np.mean(t_pred[t_obs == 0]), sum(t_obs) , len(t_obs))
-
     return np.mean(ite)
 
 

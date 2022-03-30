@@ -224,6 +224,11 @@ def make_gwas(params, unit_test=False):
 
 
 def make_ihdp(params):
+    """Call functions from CompBioAndSimulate Repository
+
+    :param params:
+    :return:
+    """
     seed = params['seed']
     assert 1 <= seed <= 10, 'Seed/Id out of range (0-10) ---'+str(seed)
     data_setting = bcdata.ihdp_data(path='/content/data/ihdp/', id=seed)

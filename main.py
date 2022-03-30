@@ -1,50 +1,47 @@
 """
-Code purpose: Illustrate a ML file structure
 Written by Raquel Aoki
-Date: September 2021
-This is a new test
-For an example using absl.flags, visit https://abseil.io/docs/python/guides/flags
 """
 
 import os
 import pandas as pd
 import sys
-import utils
 import yaml
-from helper_data import make_dataset
 import logging
 
+# Local Imports
+from utils import read_config_names, repeat_experiment
+import helper_parameters as hp
 
-def main(config_path):
+def main(paths_args):
     """ Main function of the project.
     It loads config settings, dataset, run all the methods, save output.
     Args:
-        config_path: path for the config files.
+        paths: path for the config files.
     """
-    device = torch.device("cuda" if next(model.parameters()).is_cuda else "cpu")
 
-    logging.basicConfig(filename='myapp.log', level=logging.INFO)
-    logging.info('Started')
+    # Find the path+name of all config files in a given  folder
+    configs = read_config_names(paths_args['config'])
 
-    # Load the config file. All comments should end with a .
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-    params = config["parameters"]
-
-    # Load dataset.
-    data_s, data_t = make_dataset(params)
-
-    # Run methods.
-    output = utils.run_methdos(data_s, data_t, params)
-
-    # Save results.
-    if params['save_output']:
-        file_path = params['path_output'] + str(params['config']) + '.csv'
-        output.to_csv(file_path)
+    if paths_args['load_previous_table']:
+        table = pd.read_csv(paths_args['load_previous_table_path'], index_col=[0])
     else:
-        print(output)
-    logging.info('Finished')
-    return
+        table = pd.DataFrame()
+
+    # Run models for all config files
+    for config in configs:
+        params = hp.parameter_loader(config_path=config)
+        output_path = paths_args['drive'] + 'table_' + params['data_name']  # +'_'+params['model_name']
+        table = repeat_experiment(params, table, use_range_source_p=paths_args['use_range_source_p'],
+                                  save=paths_args['save'], output_save=output_path,
+                                  previous=paths_args['previous'])
+
+    table['mae_naive'] = table['tau'] - table['ate_naive_all']
+    table['mae_aipw'] = table['tau'] - table['ate_aipw_all']
+    table['mae_naive'] = np.abs(table['mae_naive'].values)
+    table['mae_aipw'] = np.abs(table['mae_aipw'].values)
+    table.to_csv(output_path + '.csv', sep=',')
+
+    return table
 
 
 if __name__ == "__main__":

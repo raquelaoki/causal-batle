@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 class causal_batle(nn.Module):
+    """Causal Batle.
+    To adopt alternative backbone models, update here.
+    Input: basic architecture, n_covariates (int).
+    Return: nn.Module model.
+    """
     def __init__(self, n_covariates, dropout_p=0.5, units1=200, units2=100, units3=1):
         super().__init__()
 
@@ -43,6 +48,7 @@ class causal_batle(nn.Module):
 
 class causal_batle_head(nn.Module):
     """ Causal Batle Head.
+    Used inside causal_batle, it attaches to the backbone architecture.
     """
 
     def __init__(self, n_covariates, units1=200, units2=100, units3=1, dropout_p=0.5):
@@ -108,6 +114,7 @@ class causal_batle_head(nn.Module):
 
 
 class decoder(nn.Module):
+    """Simple Autoenconder"""
     def __init__(self, n_covariates, units1):
         super(decoder, self).__init__()
         self.decoder_layer1_1 = nn.Linear(in_features=units1, out_features=units1)
@@ -174,11 +181,6 @@ def fit_causal_batle(epochs,
     """
 
     logger.debug('...starting')
-
-    # use prefetch_generator and tqdm for iterating through data
-    # pbar = tqdm(enumerate(BackgroundGenerator(train_data_loader, ...)),
-    #            total=len(train_data_loader))
-    # start_time = time.time()
 
     if use_tensorboard:
         writer_tensorboard = ht.TensorboardWriter(path_logger=path_logger,
@@ -280,7 +282,6 @@ def fit_causal_batle(epochs,
         metric_train_d[e] = np.nanmean(_metrics_d)
         metric_train_r[e] = np.nanmean(_metrics_r)
 
-        print('epoch', e, loss_train_t[e], loss_train_y[e])
         if use_validation:
             lm_val = _calculate_loss_metric_noopti(model=model, loader=loader_val, device=device,
                                                    criterion=criterion, metric_functions=metric_functions)
@@ -334,7 +335,7 @@ def _calculate_loss_metric_noopti(model, loader, device, criterion, metric_funct
     :param model:
     :param loader:
     :param device:
-    :return:
+    :return: dictionary with losses and metrics.
     """
     _metrics_t, _metrics_y, _metrics_d, _metrics_r = [], [], [], []
     _loss_t, _loss_y, _loss_d, _loss_r, _loss_a = [], [], [], [], []
