@@ -1,12 +1,13 @@
-import pandas as pd
+import os
 import logging
+import numpy as np
+import pandas as pd
+
+# Local Imports.
 import helper_fit as hfit
 import helper_data as hd
-from dragonnet import dragonnet
+from baselines.dragonnet import dragonnet
 
-# temp
-import numpy as np
-import os
 
 logger = logging.getLogger(__name__)
 

@@ -6,27 +6,22 @@ https://github.com/raquelaoki/M3E2/blob/main/resources/dragonnet.py
 Alternative implementation of the Dragonnet model: A neural network to estimate treatment effects.
 Adopting pytorch
 """
-import keras.backend as K
 import logging
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor
-from torch.utils.data import Dataset, DataLoader, TensorDataset
-from torch.distributions.one_hot_categorical import OneHotCategorical
 
-from sklearn import metrics
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score, roc_curve
+from sklearn.metrics import mean_squared_error, roc_auc_score
+from torch import Tensor
+#from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 # Local imports
 import utils
 import helper_tensorboard as ht
-import bayesian_layers as bl
+import baselines.bayesian_layers as bl
 
 logger = logging.getLogger(__name__)
 

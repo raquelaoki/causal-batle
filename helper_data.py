@@ -1,17 +1,16 @@
-from typing import Any
-from numpy.random import binomial
-from scipy.special import expit
+import logging
 import numpy as np
-from sklearn.datasets import make_classification
+
+from scipy.special import expit
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
-import helper_parameters as hp
 
+
+# Local Imports
 import CompBioAndSimulated_Datasets.simulated_data_binarycause as bcdata  # local library / github repo
-import logging
+import helper_parameters as hp
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +208,7 @@ def make_gwas(params, unit_test=False):
         prob = expit(x_sum).reshape(-1)
         prob_knob = [1 * (1 - params['overlap_knob']) if item > 0.5 else 0 for item in prob]
         prob_knob = prob_knob + params['overlap_knob'] * prob
-        data_t = [binomial(1, item) for item in prob_knob]
+        data_t = [np.random.binomial(1, item) for item in prob_knob]
         data_t = np.array(data_t)
 
     data_t = data_t.reshape(-1)

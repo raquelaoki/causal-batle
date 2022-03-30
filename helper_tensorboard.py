@@ -1,7 +1,8 @@
-from datetime import datetime
 import os
-from torch.utils.tensorboard import SummaryWriter
 import logging
+
+from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
 
 logger = logging.getLogger(__name__)
 

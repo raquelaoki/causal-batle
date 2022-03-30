@@ -1,25 +1,20 @@
+import logging
 import numpy as np
 import pandas as pd
-import keras.backend as K
-import tensorflow as tf
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from sklearn.metrics import mean_squared_error, roc_auc_score
+from sklearn.model_selection import train_test_split
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-from sklearn import metrics
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, roc_auc_score
-
-import logging
-
 # Local Imports
-import utils
-import dragonnet
+import baselines.bayesian_layers as bl
+import baselines.dragonnet
 import helper_tensorboard as ht
-import bayesian_layers as bl
+import utils
 
 logger = logging.getLogger(__name__)
 

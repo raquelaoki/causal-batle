@@ -1,9 +1,10 @@
 """
 https://github.com/anndvision/quince/blob/main/quince/library/modules/variational.py
 """
-import torch
-from torch import distributions, nn
 import numpy as np
+import torch
+
+from torch import distributions, nn
 from sklearn.metrics import mean_squared_error
 
 

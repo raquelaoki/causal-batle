@@ -1,12 +1,11 @@
 """
 Written by Raquel Aoki
 """
-
+import logging
 import os
 import pandas as pd
 import sys
 import yaml
-import logging
 
 # Local Imports
 from utils import read_config_names, repeat_experiment

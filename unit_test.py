@@ -6,11 +6,13 @@
 4. GWAS + Causal-Batle, check if final ate is Nan (also combine source and target domains).
 """
 
-import helper_data as dp
-from helper_parameters import parameter_debug
 import unittest
 import logging
 import math
+
+# Local Imports.
+import helper_data as dp
+from helper_parameters import parameter_debug
 from utils import run_model, repeat_experiment
 
 
