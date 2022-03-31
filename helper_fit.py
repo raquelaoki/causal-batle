@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 
 # Local
-import baselines.aipw
+import baselines.aipw as aipw
 import baselines.bayesian_layers as bl
-import baselines.dragonnet
+import baselines.dragonnet as dragonnet
 import causal_batle as cb
 import helper_ate as ha
 
