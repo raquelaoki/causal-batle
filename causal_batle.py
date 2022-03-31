@@ -12,7 +12,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 # Local Imports
 import baselines.bayesian_layers as bl
-import baselines.dragonnet
+import baselines.dragonnet as dragonnet
 import helper_tensorboard as ht
 import utils
 
