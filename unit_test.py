@@ -47,7 +47,6 @@ class DataPrep(unittest.TestCase):
             use_tensorboard=False, max_epochs=2, ate_method_list=['naive', 'ipw', 'aipw'],
             config_name='unit_test', alpha=[1, 1, 0], repetitions=1,
         )
-        #metrics, loss, ate, tau = run_model(params)
         table = repeat_experiment(params)
         self.assertFalse(math.isnan(table['ate_aipw_train'].values[0]), 'IHDP+AIPW failed.')
 
