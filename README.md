@@ -108,6 +108,15 @@ We have 4 unit tests implemented that check the main functions implemented.
 !python -m unit_test
 ```
 
+To run the unit tests in Colab, we use: 
+```shell
+!git clone https://github.com/raquelaoki/CompBioAndSimulated_Datasets.git
+!git clone -b in_progress https://github.com/raquelaoki/causal-batle.git
+!mv  -v /content/causal-batle/* /content/
+!python -m unit_test
+```
+
+
 ## References
 * baselines https://github.com/oatml/ucate (bayesian NN + uncertainty) and https://github.com/anndvision/quince (with bounds)
 * drgonnet https://github.com/claudiashi57/dragonnet/blob/master/src/experiment/models.py
