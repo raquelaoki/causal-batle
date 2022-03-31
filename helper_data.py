@@ -229,7 +229,7 @@ def make_ihdp(params):
     :return:
     """
     seed = params['seed']
-    assert 1 <= seed <= 10, 'Seed/Id out of range (0-10) ---'+str(seed)
+    assert 0 <= seed <= 8, 'Seed/Id out of range (0-8) ---'+str(seed)
     data_setting = bcdata.ihdp_data(path='/content/data/ihdp/', id=seed)
     data_x, data_y, data_t, tau = data_setting.generate_samples()
 

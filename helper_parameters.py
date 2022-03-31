@@ -86,7 +86,7 @@ def _check_params_consistency(params):
         params['use_overlap_knob'] = params.get('use_overlap_knob', False)
         params['overlap_knob'] = params.get('overlap_knob', 1)
     elif params['data_name'] == 'ihdp':
-        assert 1 <= params['seed'] <= 10, 'Seed out of range (1-10)'
+        assert 0 <= params['seed'] < 9, 'Seed out of range (0,9)'
         params['n_covariates'] = params.get('n_covariates', 25)
         params['n_sample'] = params.get('n_sample', 747)
     else:
