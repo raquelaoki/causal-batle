@@ -123,6 +123,7 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
         params['seed'] = seed + previous
         print('seed ', seed)
         for i in range(b):
+            logger.debug('seed ', seed, ' b ', b)
             params['config_name'] = params['data_name'] + '_' + params['model_name']
             params['config_name'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
@@ -153,7 +154,7 @@ def range_source_p(params, table, source_size_p=None, b=1):
         assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
     config = params['config_name']
     for p in source_size_p:
-        print('...p ', p)
+        logger.debug('...p ', p)
         params['config_name'] = config + '_' + str(p)
         params['source_size_p'] = p
         if params['model_name'] == 'batle':
