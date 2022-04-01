@@ -187,9 +187,10 @@ Tensorboard
 
 ### TODO:
 1) Save model based on validation;
-2) Add cevae; 
-3) Add dr-cfr;
-4) Add X-learner;
-5) Add new dataset (vision);
-6) Add BCCH dataset;
-7) sensitive analysis. 
+2) Add main on unit_test.py
+3) Add cevae; 
+4) Add dr-cfr;
+5) Add X-learner;
+6) Add new dataset (vision);
+7) Add BCCH dataset;
+8) sensitive analysis. 

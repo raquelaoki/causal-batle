@@ -121,8 +121,8 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
 
     for seed in range(n_seeds):
         params['seed'] = seed + previous
+        print('seed ', seed, ' b ', i)
         for i in range(b):
-            print('seed ', seed, ' b ', i)
             params['config_name'] = params['data_name'] + '_' + params['model_name']
             params['config_name'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
