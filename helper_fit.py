@@ -80,6 +80,12 @@ def make_model(params):
         fit = cb.fit_causal_batle
         ate = ha.calculate_ate_bayesian
         logger.debug('Implementation in progress')
+    elif params['model_name']=='cevae':
+        criterion = [cevae.criterion_l1l2,
+                     cevae.criterion_t,
+                     cevae.criterion_y,
+                     cevae.criterion_kl,
+                     cevae.criterion_l6l7]
     else:
         logger.warning('%s not implemented', params['model_name'])
     logger.debug('...model constructed')
