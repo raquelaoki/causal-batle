@@ -5,6 +5,8 @@ https://github.com/raquelaoki/M3E2/blob/main/resources/dragonnet.py
 
 Alternative implementation of the Dragonnet model: A neural network to estimate treatment effects.
 Adopting pytorch
+
+TODO: add paper
 """
 import logging
 import numpy as np

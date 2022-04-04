@@ -1,3 +1,17 @@
+import numpy as np
+import seaborn as sns
+import pandas as pd
+import sys
+import os
+import numpy
+numpy.set_printoptions(threshold=sys.maxsize)
+numpy.set_printoptions(threshold=sys.maxsize)
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings("ignore")
+sns.set_style("whitegrid")
+
+
 def read_table(filename,
                path='/content/drive/MyDrive/Colab Notebooks/outputs/',
                quick_stats=False):
