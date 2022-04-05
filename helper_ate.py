@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import pandas as pd
+import torch
 
 from sklearn.metrics import accuracy_score, roc_curve
 from sklearn.preprocessing import StandardScaler
@@ -68,6 +69,52 @@ def calculate_ate_bayesian(loader_train, loader_test, loader_all, model,
     ate_estimated.update(ate_test)
 
     return ate_estimated
+
+
+def calculate_ate_cevae(loader_train, loader_test, loader_all, model,   ate_method_list=['naive'],
+                        device='cpu',  forward_passes=10, filter_d=False):
+    ate_train = _per_set_ate(loader_train, model, make_predictions=_make_predictions_cevae,
+                             methods_list=ate_method_list, loader_name='train',
+                             device=device, forward_passes=forward_passes, filter_d=filter_d)
+    ate_test = _per_set_ate(loader_test, model, make_predictions=_make_predictions_cevae,
+                            methods_list=ate_method_list, loader_name='test',
+                            device=device, forward_passes=forward_passes, filter_d=filter_d)
+    ate_all = _per_set_ate(loader_all, model, make_predictions=_make_predictions_cevae,
+                           methods_list=ate_method_list, loader_name='all',
+                           device=device, forward_passes=forward_passes, filter_d=filter_d)
+
+    ate_estimated = {}
+    ate_estimated.update(ate_all)
+    ate_estimated.update(ate_train)
+    ate_estimated.update(ate_test)
+
+    return ate_estimated
+
+
+def _make_predictions_cevae(data_loader, model, device, place_holder, filter_d=False):
+    # https://github.com/rik-helwegen/CEVAE_pytorch/blob/master/evaluation.py
+    y_obs, t_obs = np.array([]), np.array([])
+    y0_pred, y1_pred = np.array([]), np.array([])
+    for i, batch in enumerate(data_loader):
+        y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
+        t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
+
+        y_infer = model.q_y_xt_dist(batch[0].to(device), batch[2].to(device))  # use inferred y
+        xy = torch.cat((batch[0].to(device), y_infer.mean), 1)
+        z_infer = model.q_z_tyx_dist(xy=xy, t=batch[2].to(device))
+        # Manually input zeros and ones
+        y0 = model.p_y_zt_dist(z_infer.mean, torch.zeros(z_infer.mean.shape).to(device)).mean
+        y1 = model.p_y_zt_dist(z_infer.mean, torch.ones(z_infer.mean.shape).to(device)).mean
+        #return y0.cpu().detach().numpy(), y1.cpu().detach().numpy()
+
+        #t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
+
+        y0_pred = np.concatenate([y0_pred.reshape(-1), y0.cpu().detach().numpy().reshape(-1)], 0)
+        y1_pred = np.concatenate([y1_pred.reshape(-1), y1.cpu().detach().numpy().reshape(-1)], 0)
+
+    t_pred = None
+    return t_pred, y0_pred, y1_pred, t_obs, y_obs
+
 
 
 def _make_predictions_regular(data_loader, model, device, place_holder, filter_d=False):
@@ -189,7 +236,7 @@ def _per_set_ate(data_loader,
 def _naive_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
     """Calculate ATE using naive formula."""
     ite = (y1_pred - y0_pred)
-    return np.mean(_truncate_by_g(attribute=ite, g=t_pred, level=0.05))
+    return np.mean(ite)
 
 
 def _ipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):

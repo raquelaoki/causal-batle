@@ -8,7 +8,6 @@ import helper_fit as hfit
 import helper_data as hd
 from baselines.dragonnet import dragonnet
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +39,8 @@ def run_model(params, model_seed=0):
                                                                         seed=params['seed']
                                                                         )
     success = False
-    while not success:
+    # while not success:
+    if success:
         try:
             metrics, loss, ate = hfit.fit_wrapper(params=params,
                                                   loader_train=tloader_train,
@@ -49,12 +49,27 @@ def run_model(params, model_seed=0):
                                                   loader_val=tloader_val,
                                                   use_validation=params['use_validation'],
                                                   use_tensorboard=params['use_tensorboard'],
-                                                  model_seed=model_seed)
+                                                  model_seed=model_seed,
+                                                  binfeat=data.binfeat,
+                                                  contfeat=data.contfeat
+                                                  )
             success = True
         except ValueError:
-            #params['seed'] = params['seed'] + 1
-            model_seed = model_seed+1
+            # params['seed'] = params['seed'] + 1
+            model_seed = model_seed + 1
             print('...value error')
+    else:
+        metrics, loss, ate = hfit.fit_wrapper(params=params,
+                                              loader_train=tloader_train,
+                                              loader_test=tloader_test,
+                                              loader_all=tloader_all,
+                                              loader_val=tloader_val,
+                                              use_validation=params['use_validation'],
+                                              use_tensorboard=params['use_tensorboard'],
+                                              model_seed=model_seed,
+                                              binfeat=data.binfeat,
+                                              contfeat=data.contfeat
+                                              )
     return metrics, loss, ate, tau
 
 
@@ -122,8 +137,8 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     for seed in range(n_seeds):
         params['seed'] = seed + previous
         print('seed ', seed)
+        # logger.debug('seed', seed)
         for i in range(b):
-            logger.debug('seed ', seed, ' b ', b)
             params['config_name'] = params['data_name'] + '_' + params['model_name']
             params['config_name'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
@@ -154,7 +169,7 @@ def range_source_p(params, table, source_size_p=None, b=1):
         assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
     config = params['config_name']
     for p in source_size_p:
-        logger.debug('...p ', p)
+        #logger.debug('...p ', p)
         params['config_name'] = config + '_' + str(p)
         params['source_size_p'] = p
         if params['model_name'] == 'batle':

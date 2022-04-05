@@ -1,0 +1,15 @@
+parameters:
+    data_name: 'ihdp'
+    model_name: 'cevae'
+    config_name: 'ihdp_cevae'
+    ate_method_list: [ 'naive']
+    repetitions: 10
+    seed: 2
+    max_epochs: 100
+    batch_size: 50
+    lr: 0.001
+    weight_decay: 0.05
+    alpha: [1]
+    use_validation: False
+    use_dropout: False
+    use_tensorboard: False

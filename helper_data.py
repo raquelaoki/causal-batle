@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataTargetAndSource:
-    def __init__(self, x, t, y, d, test_size=0.33, seed=0, use_validation=False):
+    def __init__(self, x, t, y, d, test_size=0.33, seed=0, use_validation=False, binfeat=[], contfeat=[]):
         self.use_validation = use_validation
         x_train, x_test, y_train, y_test, t_train, t_test, d_train, d_test = train_test_split(x, y, t, d,
                                                                                               test_size=test_size,
@@ -46,6 +46,9 @@ class DataTargetAndSource:
         self.y = y.reshape(-1, 1)
         self.d = d.reshape(-1, 1)
 
+        self.binfeat = binfeat
+        self.contfeat = contfeat
+
     def loader(self, batch=32, seed=0):
         # Creating TensorDataset to use in the DataLoader.
         dataset_train = TensorDataset(Tensor(self.x_train), Tensor(self.y_train),
@@ -71,7 +74,7 @@ class DataTargetAndSource:
 
 
 class DataTarget:
-    def __init__(self, x, t, y, test_size=0.33, seed=0, use_validation=False):
+    def __init__(self, x, t, y, test_size=0.33, seed=0, use_validation=False, binfeat=[], contfeat=[]):
         super(DataTarget, self).__init__()
         self.use_validation = use_validation
 
@@ -93,6 +96,8 @@ class DataTarget:
         self.x = x
         self.t = t.reshape(-1, 1)
         self.y = y.reshape(-1, 1)
+        self.binfeat = binfeat
+        self.contfeat = contfeat
 
     def loader(self, batch=32, seed=0):
         # Creating TensorDataset to use in the DataLoader.
@@ -114,9 +119,8 @@ class DataTarget:
         return loader_train, loader_val, loader_test, loader_all
 
 
-def make_Data(data_x, data_t, data_y, data_x_source=None,
-              seed=1, source_size=0.2, test_size=0.33,
-              use_validation=False, use_source=False):
+def make_Data(data_x, data_t, data_y, data_x_source=None, seed=1, source_size=0.2, test_size=0.33,
+              use_validation=False, use_source=False, binfeat=[], contfeat=[]):
     """ It creates the data classes (DataTarget or DataTargetAndSource) from input data data_x, data_t, data_y.
     VALID ONLY FOR GWAS AND IHDP.
     It will alwyas split the dataset using source_size, even it the method only uses the target data
@@ -132,6 +136,8 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
     :param test_size: proportion, in[0,1]
     :param use_validation: bool
     :param use_source:bool
+    :param binfeat: array with numbers of binary covariates columns
+    :param contfeat: array with numbers of continous covariates columns
     :return: DataTarget or DataTargetAndSource class
     """
     if use_source:
@@ -159,19 +165,17 @@ def make_Data(data_x, data_t, data_y, data_x_source=None,
         y = y[permutation]
         d = d[permutation]
 
-        data = DataTargetAndSource(x=x,
-                                   t=t,
-                                   y=y,
-                                   d=d,
-                                   use_validation=use_validation,
-                                   test_size=test_size)
+        data = DataTargetAndSource(x=x, t=t, y=y, d=d, use_validation=use_validation,
+                                   test_size=test_size, binfeat=binfeat, contfeat=contfeat
+                                   )
     else:
         logger.debug('... using only target domain data.')
 
         s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed * 10,
                                                     test_size=source_size)
         t_x = t_x.values
-        data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size)
+        data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size,
+                          binfeat=binfeat,contfeat=contfeat)
     return data
 
 
@@ -218,7 +222,10 @@ def make_gwas(params, unit_test=False):
                      seed=seed,
                      source_size=params['source_size_p'],
                      use_validation=params['use_validation'],
-                     use_source=params['use_source'])
+                     use_source=params['use_source'],
+                     binfeat=[],
+                     contfeat=list(range(data_x.shape[1]))
+                     )
     return data, tau[0]  # treatment_effects[treatment_columns]
 
 
@@ -239,6 +246,8 @@ def make_ihdp(params):
                      seed=seed,
                      source_size=params['source_size_p'],
                      use_validation=params['use_validation'],
-                     use_source=params['use_source'])
+                     use_source=params['use_source'],
+                     binfeat=list(range(6, 25)),
+                     contfeat=list(range(6)))
 
     return data, tau

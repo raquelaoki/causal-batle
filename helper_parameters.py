@@ -60,7 +60,7 @@ def _check_params_consistency(params):
     :param params: dictionary with parameters
     :return: dictionary with parameters after consistency tests.
     """
-    valid_model_names = ['dragonnet', 'aipw', 'bdragonnet', 'batle']
+    valid_model_names = ['dragonnet', 'aipw', 'bdragonnet', 'batle', 'cevae']
     valid_data_names = ['ihdp', 'gwas']
 
     assert 'data_name' in params, 'data_name missing!'
@@ -160,6 +160,20 @@ def _check_params_consistency(params):
         params['forward_passes'] = params.get('forward_passes', 10)  # Used only for bdragonnet and batle.
         params['filter_d'] = True
         params['weight_1'] = 2
+    elif params['model_name'] == 'cevae':
+        params['max_epochs'] = params.get('max_epochs', 50)
+        params['batch_size'] = params.get('batch_size', 50)
+        params['lr'] = params.get('lr', 0.01)
+        params['weight_decay'] = params.get('weight_decay', 0.05)
+        params['use_validation'] = params.get('use_validation', True)
+        params['use_dropout'] = params.get('use_dropout', False)
+        params['use_tensorboard'] = params.get('use_tensorboard', True)
+        params['use_source'] = params.get('use_source', False)
+        params['shuffle'] = params.get('shuffle', False)
+        params['type_original'] = params.get('type_original', False)
+        params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
+        params['filter_d'] = False
+        params['ate_method_list'] = ['naive']
     else:
         logger.debug('%s not implemented', params['model_name'])
 

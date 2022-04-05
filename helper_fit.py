@@ -8,6 +8,7 @@ import torch.nn as nn
 import baselines.aipw as aipw
 import baselines.bayesian_layers as bl
 import baselines.dragonnet as dragonnet
+import baselines.cevae as cevae
 import causal_batle as cb
 import helper_ate as ha
 
@@ -15,10 +16,12 @@ import helper_ate as ha
 logger = logging.getLogger(__name__)
 
 
-def make_model(params):
+def make_model(params, binfeat=[], contfeat=[]):
     """
     Create the model, criterion, and metrics according to type of model selected.
     :param params: dictionaty. Required key: {model_name}. Optinal keys: architecture parameters;
+    :param binfeat: array with column numbers of binary covariates (Used by some baselines);
+    :param contfeat: array with column numbers of contfeat covariates (Used by some baselines);
     :return: model(nn.Module), criterion (list of criterions),
         metric_functions (list of metrics), fit (funtion to train model)
     """
@@ -80,12 +83,19 @@ def make_model(params):
         fit = cb.fit_causal_batle
         ate = ha.calculate_ate_bayesian
         logger.debug('Implementation in progress')
-    elif params['model_name']=='cevae':
+    elif params['model_name'] == 'cevae':
+        model = cevae.cevae(n_covariates=params['n_covariates'],
+                            binfeat=binfeat,
+                            contfeat=contfeat)
         criterion = [cevae.criterion_l1l2,
                      cevae.criterion_t,
                      cevae.criterion_y,
                      cevae.criterion_kl,
                      cevae.criterion_l6l7]
+        metric_functions = [cevae.metric_function_cevae_t,
+                            cevae.metric_function_cevae_y]
+        fit = cevae.fit_cevae
+        ate = ha.calculate_ate_cevae
     else:
         logger.warning('%s not implemented', params['model_name'])
     logger.debug('...model constructed')
@@ -97,7 +107,9 @@ def fit_wrapper(params,
                 loader_val=None,
                 use_tensorboard=False,
                 use_validation=False,
-                model_seed=0):
+                model_seed=0,
+                binfeat=[],
+                contfeat=[]):
     """ Wrap all model trainign functions.
     1. Call make_model() to create model, criterion, metrics,fit function and ate estimators.
     2. Set optimizer.
@@ -132,7 +144,7 @@ def fit_wrapper(params,
     else:
         path_logger = None
 
-    model, criterion, metric_functions, fit, ate = make_model(params)
+    model, criterion, metric_functions, fit, ate = make_model(params, binfeat=binfeat, contfeat=contfeat)
 
     if torch.cuda.is_available():
         model.to(device)
@@ -140,7 +152,6 @@ def fit_wrapper(params,
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=params['lr'],
                                  weight_decay=params['weight_decay']
-                                 # weight_decay=(0.5 * (1 - 0.5)) / 200
                                  )
     alpha = params['alpha']
 

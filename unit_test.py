@@ -9,12 +9,11 @@
 import unittest
 import logging
 import math
-
+import pandas as pd
 # Local Imports.
 import helper_data as dp
-from helper_parameters import parameter_debug
+from helper_parameters import parameter_debug, _check_params_consistency
 from utils import run_model, repeat_experiment
-
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -54,12 +53,32 @@ class DataPrep(unittest.TestCase):
         logger.debug('Test: GWAS anc Causal-Batle')
         params = parameter_debug(
             data_name='gwas', model_name='batle', max_epochs=2, batch_size=200,
-            use_validation=True, ate_method_list=['naive', 'ipw', 'aipw'],
+            use_validation=True, ate_method_list=['naive', 'aipw'],
             config_name='unit_test', lr=0.001, weight_decay=0.05, alpha=[1, 1, 1, 1, 1],
             use_source=True, repetitions=5,
         )
         metrics, loss, ate, tau = run_model(params)
         self.assertFalse(math.isnan(ate['ate_aipw_train']), 'GWAS anc Causal-Batle failed.')
+
+    def test_ihdp_cevae(self):
+        logger.debug('Test: IHDP anc Cevae')
+
+        params = {'model_name': 'cevae',
+                  'data_name': 'ihdp',
+                  'config_name': 'ihdp_cevae',
+                  'seed': 1,
+                  'repetitions': 1,
+                  'alpha': [1],
+                  'lr': 0.001,
+                  'weight_decay': 0.05,
+                  'use_validation': False}
+
+        params = _check_params_consistency(params)
+
+        table = repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False,
+                                  save=False, output_save='',
+                                  previous=0)
+        self.assertFalse(math.isnan(table['ate_naive_train'].values[0]), 'IHDP+CEVAE failed.')
 
 
 if __name__ == '__main__':

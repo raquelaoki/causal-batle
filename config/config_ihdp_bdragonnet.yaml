@@ -1,8 +1,8 @@
 parameters:
     data_name: 'ihdp'
     model_name: 'bdragonnet'
-    config_name: 'ihdp_bdragonnet'
-    ate_method_list: ['naive','aipw']
+    config_name: 'ihdp_bdragonnet_aipw'
+    ate_method_list: ['aipw']
     repetitions: 10
     seed: 8
     max_epochs: 100
