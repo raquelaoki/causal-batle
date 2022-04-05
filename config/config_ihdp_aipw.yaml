@@ -4,7 +4,7 @@ parameters:
     config_name: 'ihdp_aipw'
     ate_method_list: ['naive','aipw']
     repetitions: 10
-    seed: 4
+    seed: 8
     max_epochs: 100
     batch_size: 50
     lr: 0.1
