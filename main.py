@@ -29,7 +29,7 @@ def main(paths_args):
     # Run models for all config files
     for config in configs:
         params = hp.parameter_loader(config_path=config)
-        output_path = paths_args['drive'] + 'table_' + params['data_name']  # +'_'+params['model_name']
+        output_path = paths_args['drive'] + 'table_' + params['config_name']
         table = repeat_experiment(params, table, use_range_source_p=paths_args['use_range_source_p'],
                                   save=paths_args['save'], output_save=output_path,
                                   previous=paths_args['previous'])

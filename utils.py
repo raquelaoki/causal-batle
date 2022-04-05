@@ -94,6 +94,7 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
         'model_name': params['model_name'],
         'data_name': params['data_name'],
         'config': params['config_name'],
+        'config_rep': params['config_name_seeds'],
         'tau': tau,
         'b': b,
         'source_size_p': params['source_size_p'],
@@ -139,8 +140,8 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
         print('seed ', seed)
         # logger.debug('seed', seed)
         for i in range(b):
-            params['config_name'] = params['data_name'] + '_' + params['model_name']
-            params['config_name'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
+            #params['config_name'] = params['data_name'] + '_' + params['model_name']
+            params['config_name_seeds'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
                 table = range_source_p(params, table, source_size_p, b=i + previous)
             else:

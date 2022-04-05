@@ -3,11 +3,11 @@ parameters:
     model_name: 'aipw'
     config_name: 'ihdp_aipw'
     ate_method_list: ['naive','aipw']
-    repetitions: 10
-    seed: 8
+    repetitions: 5
+    seed: 4
     max_epochs: 100
     batch_size: 50
-    lr: 0.1
+    lr: 0.001
     weight_decay: 0.05
     use_validation: False
     use_tensorboard: False

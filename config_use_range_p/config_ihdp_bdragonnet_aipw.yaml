@@ -3,8 +3,8 @@ parameters:
     model_name: 'bdragonnet'
     config_name: 'ihdp_bdragonnet_aipw'
     ate_method_list: ['aipw']
-    repetitions: 10
-    seed: 8
+    repetitions: 5
+    seed: 4
     max_epochs: 100
     batch_size: 50
     units1: 200
