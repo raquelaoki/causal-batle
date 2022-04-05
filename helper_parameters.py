@@ -69,10 +69,28 @@ def _check_params_consistency(params):
     assert 'seed' in params, 'seed missing!'
 
     # Adding default values
-    params['repetitions'] = params.get('repetitions', 10)
     params['ate_method_list'] = params.get('ate_method_list', ['naive', 'ipw'])
-    params['episilon'] = params.get('episilon', 0.005)  # Used only for dragonnet (Targeted Loss).
+    params['repetitions'] = params.get('repetitions', 10)
+    params['max_epochs'] = params.get('max_epochs', 50)
+    params['shuffle'] = params.get('shuffle', False)
+    params['batch_size'] = params.get('batch_size', 50)
+    params['lr'] = params.get('lr', 0.01)
+    params['weight_decay'] = params.get('weight_decay', 0.05)
+
+    params['use_dropout'] = params.get('use_dropout', False)
+    params['dropout_p'] = params.get('dropout_p', 0.5)
+    params['use_source'] = params.get('use_source', False)
     params['source_size_p'] = params.get('source_size_p', 0.2)
+    params['use_tensorboard'] = params.get('use_tensorboard', False)
+    params['use_validation'] = params.get('use_validation', False)
+    params['use_validation_best'] = params.get('use_validation_best', False) # TODO: change to false?
+    if params['use_validation_best']:
+        assert params['use_validation_best'] == params['use_validation'], 'use_validation_best without use_validation'
+
+    params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
+    params['type_original'] = params.get('type_original', True)  # Original Dragonnet
+    params['filter_d'] = params.get('filter_d', False)  #  Battle only
+    params['episilon'] = params.get('episilon', 0.005)  # Used only for dragonnet (Targeted Loss).
     params['weight_1'] = params.get('weight_1', 1)
 
     assert params['data_name'] in valid_data_names, 'data_name not implemented!'
@@ -93,86 +111,36 @@ def _check_params_consistency(params):
         logger.debug('%s not implemented', params['data_name'])
 
     if params['model_name'] == 'dragonnet':
-        params['max_epochs'] = params.get('max_epochs', 50)
-        params['batch_size'] = params.get('batch_size', 50)
         params['units1'] = params.get('units1', 200)
         params['units2'] = params.get('units2', 100)
         params['units3'] = params.get('units3', 1)
-        params['lr'] = params.get('lr', 0.01)
-        params['weight_decay'] = params.get('weight_decay', 0.05)
-        params['dropout_p'] = params.get('dropout_p', 0.5)
         params['alpha'] = params.get('alpha', [1, 1, 0])
-        params['use_validation'] = params.get('use_validation', False)
-        params['use_dropout'] = params.get('use_dropout', False)
-        params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_source'] = params.get('use_source', False)
-        params['shuffle'] = params.get('shuffle', False)
-        params['type_original'] = params.get('type_original', True)
-        params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
-        params['filter_d'] = False
     elif params['model_name'] == 'bdragonnet':
-        params['max_epochs'] = params.get('max_epochs', 50)
-        params['batch_size'] = params.get('batch_size', 50)
         params['units1'] = params.get('units1', 200)
         params['units2'] = params.get('units2', 100)
         params['units3'] = params.get('units3', 1)
-        params['lr'] = params.get('lr', 0.01)
-        params['weight_decay'] = params.get('weight_decay', 0.05)
-        params['dropout_p'] = params.get('dropout_p', 0.5)
         params['alpha'] = params.get('alpha', [1, 1, 0])
-        params['use_validation'] = params.get('use_validation', False)
-        params['use_dropout'] = params.get('use_dropout', True)
-        params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_source'] = params.get('use_source', False)
-        params['shuffle'] = params.get('shuffle', False)
-        params['type_original'] = params.get('type_original', False)
-        params['forward_passes'] = params.get('forward_passes', 10)  # Used only for bdragonnet and batle.
+        params['use_dropout'] = True
+        params['type_original'] = False
+        assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
         params['filter_d'] = False
     elif params['model_name'] == 'aipw':
         assert 'n_covariates' in params, 'n_covariates missing'
         params['max_epochs'] = params.get('max_epochs', 50)
         params['batch_size'] = params.get('batch_size', 50)
-        params['lr'] = params.get('lr', 0.01)
-        params['weight_decay'] = params.get('weight_decay', 0.05)
-        params['use_validation'] = params.get('use_validation', False)
-        params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_source'] = params.get('use_source', False)
-        params['shuffle'] = params.get('shuffle', False)
         params['alpha'] = params.get('alpha', [1, 1, 1])
-        params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
-        params['filter_d'] = False
     elif params['model_name'] == 'batle':
-        params['max_epochs'] = params.get('max_epochs', 50)
-        params['batch_size'] = params.get('batch_size', 50)
         params['units1'] = params.get('units1', 200)
         params['units2'] = params.get('units2', 100)
         params['units3'] = params.get('units3', 1)
-        params['lr'] = params.get('lr', 0.01)
-        params['weight_decay'] = params.get('weight_decay', 0.05)
-        params['dropout_p'] = params.get('dropout_p', 0.5)
         params['alpha'] = params.get('alpha', [1, 1, 1, 1, 1])
-        params['use_validation'] = params.get('use_validation', True)
-        params['use_dropout'] = params.get('use_dropout', True)
-        params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_source'] = params.get('use_source', True)  # Adding source
-        params['shuffle'] = params.get('shuffle', False)
-        params['type_original'] = params.get('type_original', False)
-        params['forward_passes'] = params.get('forward_passes', 10)  # Used only for bdragonnet and batle.
+        params['use_dropout'] = True
+        params['use_source'] = True
+        params['type_original'] = False
         params['filter_d'] = True
         params['weight_1'] = 2
+        assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
     elif params['model_name'] == 'cevae':
-        params['max_epochs'] = params.get('max_epochs', 50)
-        params['batch_size'] = params.get('batch_size', 50)
-        params['lr'] = params.get('lr', 0.01)
-        params['weight_decay'] = params.get('weight_decay', 0.05)
-        params['use_validation'] = params.get('use_validation', True)
-        params['use_dropout'] = params.get('use_dropout', False)
-        params['use_tensorboard'] = params.get('use_tensorboard', True)
-        params['use_source'] = params.get('use_source', False)
-        params['shuffle'] = params.get('shuffle', False)
-        params['type_original'] = params.get('type_original', False)
-        params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
-        params['filter_d'] = False
         params['ate_method_list'] = ['naive']
     else:
         logger.debug('%s not implemented', params['model_name'])
@@ -191,7 +159,7 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
                     n_sample=5000, n_covariates=1000, use_validation=False, use_tensorboard=False,
                     use_source=False, dropout_p=0, use_overlap_knob=False, overlap_knob=1,
                     seed=1, alpha=[1, 1, 1], config_name='configA', ate_method_list=['naive'],
-                    repetitions=3):
+                    repetitions=3, forward_passes=10):
     """
     Function for testing, creates params dictionary withouh the yaml files.
     """
@@ -200,7 +168,8 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
               'seed': seed, 'config_name': config_name,
               'use_tensorboard': use_tensorboard,
               'ate_method_list': ate_method_list,
-              'repetitions': repetitions}
+              'repetitions': repetitions,
+              'forward_passes':forward_passes}
 
     if params['data_name'] == 'gwas':
         params = _make_parameters_data_gwas(params=params,

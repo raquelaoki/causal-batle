@@ -25,7 +25,7 @@ class DataPrep(unittest.TestCase):
         params = parameter_debug(max_epochs=2, n_covariates=100, n_sample=1000,
                                  lr=0.01, batch_size=20, weight_decay=0.01, use_validation=True,
                                  units1=10, units2=5, dropout_p=0.5, use_overlap_knob=True, overlap_knob=0.5,
-                                 repetitions=1
+                                 repetitions=1,
                                  )
 
         metrics, loss, ate, tau = run_model(params)
@@ -44,7 +44,7 @@ class DataPrep(unittest.TestCase):
         params = parameter_debug(
             data_name='ihdp', model_name='bdragonnet', use_validation=True,
             use_tensorboard=False, max_epochs=2, ate_method_list=['naive', 'ipw', 'aipw'],
-            config_name='unit_test', alpha=[1, 1, 0], repetitions=1,
+            config_name='unit_test', alpha=[1, 1, 0], repetitions=1,forward_passes=10
         )
         table = repeat_experiment(params)
         self.assertFalse(math.isnan(table['ate_aipw_train'].values[0]), 'IHDP+AIPW failed.')
@@ -55,7 +55,7 @@ class DataPrep(unittest.TestCase):
             data_name='gwas', model_name='batle', max_epochs=2, batch_size=200,
             use_validation=True, ate_method_list=['naive', 'aipw'],
             config_name='unit_test', lr=0.001, weight_decay=0.05, alpha=[1, 1, 1, 1, 1],
-            use_source=True, repetitions=5,
+            use_source=True, repetitions=5, forward_passes=10
         )
         metrics, loss, ate, tau = run_model(params)
         self.assertFalse(math.isnan(ate['ate_aipw_train']), 'GWAS anc Causal-Batle failed.')

@@ -171,7 +171,8 @@ def fit_wrapper(params,
                                config_name=params['config_name'],
                                home_dir=params['home_dir'],
                                episilon=params['episilon'],  # Only used by dragonnet
-                               weight_1=params['weight_1']  # Only used by causal batle
+                               weight_1=params['weight_1'] , # Only used by causal batle
+                               use_validation_best=params['use_validation_best']
                                )
 
     logger.debug("...calculating ate")
