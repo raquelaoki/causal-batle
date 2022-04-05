@@ -52,7 +52,7 @@ def run_model(params, model_seed=0):
                                                   model_seed=model_seed)
             success = True
         except ValueError:
-            params['seed'] = params['seed'] + 1
+            #params['seed'] = params['seed'] + 1
             model_seed = model_seed+1
             print('...value error')
     return metrics, loss, ate, tau
