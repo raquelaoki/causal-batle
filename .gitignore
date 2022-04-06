@@ -6,12 +6,11 @@ __pycache__/
 .DS_store
 
 # Baselines repo
-ucate/
 CompBioAndSimulated_Datasets/
 config/
 config_debug/
-config_use_range_p/
 config_used/
+config_use_range_p/
 
 # Unit test / coverage reports
 .cache
