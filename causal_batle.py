@@ -322,7 +322,6 @@ def fit_causal_batle(epochs,
     if use_validation_best:
         if best_epoch > 0:
             model.load_state_dict(best_model)
-            print('loading best validation epoch')
 
     # Calculating metrics on testing set - no dropout used here.
     lm_test = _calculate_loss_metric_noopti(model=model, loader=loader_test,
