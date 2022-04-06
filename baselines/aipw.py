@@ -128,7 +128,9 @@ def fit_aipw(epochs,
              home_dir='',
              alpha=[2,1,1],
              episilon=None,
-             weight_1=1):
+             weight_1=1,
+             use_validation_best=False,
+             ):
     logger.debug('...starting')
 
     # use prefetch_generator and tqdm for iterating through data

@@ -232,9 +232,11 @@ def fit_dragonnet(epochs,
                   config_name='',
                   home_dir='',
                   episilon=0.001,
-                  weight_1=1):
+                  weight_1=1,
+                  use_validation_best=False,
+                  ):
     """
-        Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
+    Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
     :param episilon:
     :param home_dir:
     :param config_name:

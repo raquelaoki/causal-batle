@@ -173,7 +173,6 @@ def init_qz(qz, loader_train, device):
     return qz
 
 
-
 def fit_cevae(epochs,
               model,
               loader_train,
@@ -190,7 +189,9 @@ def fit_cevae(epochs,
               config_name='',
               home_dir='',
               episilon=0.001,
-              weight_1=1):
+              weight_1=1,
+              use_validation_best=False,
+              ):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
     :param episilon:
@@ -271,9 +272,9 @@ def fit_cevae(epochs,
             loss_batch.backward()
             optimizer.step()
 
-            _loss_t.append(lt.cpu().detach().numpy())
-            _loss_y.append(ly.cpu().detach().numpy())
-            _loss_all.append(loss_batch.cpu().detach().numpy())
+            _loss_t.append(-lt.cpu().detach().numpy())
+            _loss_y.append(-ly.cpu().detach().numpy())
+            _loss_all.append(-loss_batch.cpu().detach().numpy())
             metrics_batch_t, metrics_batch_y = _calculate_metric_cevae(metric_functions=metric_functions,
                                                                        batch=batch,
                                                                        predictions=predictions)
