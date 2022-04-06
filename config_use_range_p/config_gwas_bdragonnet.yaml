@@ -17,3 +17,4 @@ parameters:
     use_dropout: True
     use_tensorboard: False
     type_original: False
+    forward_passes: 10

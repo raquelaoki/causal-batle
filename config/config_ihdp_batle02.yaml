@@ -19,3 +19,4 @@ parameters:
     use_source: True
     weight_1: 2
     source_size_p: 0.2
+    forward_passes: 10

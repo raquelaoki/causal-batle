@@ -168,10 +168,10 @@ def range_source_p(params, table, source_size_p=None, b=1):
         source_size_p = [0.2, 0.4, 0.6, 0.8]
     else:
         assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
-    config = params['config_name_seeds']
+    #config_name_seeds = params['config_name_seeds']
+    condig_name = params['config_name']
     for p in source_size_p:
-        #logger.debug('...p ', p)
-        params['config_name_seeds'] = config + '_' + str(p)
+        params['config_name'] = params['config_name_seeds'] + '_' + str(p)
         params['source_size_p'] = p
         if params['model_name'] == 'batle':
             if p > 0.6:
@@ -179,5 +179,6 @@ def range_source_p(params, table, source_size_p=None, b=1):
         metrics, loss, ate, tau = run_model(params, model_seed=b)
         table = organize(params, ate, tau, table, b=b)
 
-    params['config_name_seeds'] = config
+    #params['config_name_seeds'] = config
+    params['config_name'] = condig_name
     return table

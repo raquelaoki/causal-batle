@@ -1,10 +1,10 @@
 parameters:
     data_name: 'ihdp'
     model_name: 'batle'
-    config_name: 'ihdp_batle_08'
-    ate_method_list: [ 'naive','aipw' ]
+    config_name: 'ihdp_batle_naive'
+    ate_method_list: ['naive']
     repetitions: 5
-    seed: 4
+    seed: 3
     max_epochs: 100
     batch_size: 250
     units1: 200
@@ -12,11 +12,12 @@ parameters:
     lr: 0.005
     weight_decay: 0.08
     dropout_p: 0.25
-    alpha: [3,0.25,1,1,2]
-    use_validation: False
+    alpha: [10, 20, 1,0.5,4]
+    use_validation: True
+    use_validation_best: True
     use_dropout: True
-    use_tensorboard: False
+    use_tensorboard: True
     use_source: True
     weight_1: 2
-    source_size_p: 0.8
+    source_size_p: 0.2
     forward_passes: 10

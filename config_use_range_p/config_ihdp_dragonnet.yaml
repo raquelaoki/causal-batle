@@ -1,0 +1,19 @@
+parameters:
+    data_name: 'ihdp'
+    model_name: 'dragonnet'
+    config_name: 'ihdp_dragonnet'
+    ate_method_list: [ 'naive','aipw' ]
+    repetitions: 10
+    seed: 8
+    max_epochs: 100
+    batch_size: 50
+    units1: 200
+    units2: 100
+    lr: 0.005
+    weight_decay: 0.05
+    dropout_p: 0.25
+    alpha: [1,5,0.05]
+    use_validation: False
+    use_dropout: False
+    use_tensorboard: False
+    episilon: 0.01
