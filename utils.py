@@ -121,7 +121,7 @@ def read_config_names(path):
 
 
 def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, source_size_p=None,
-                      save=False, output_save='', previous=0):
+                      save=False, output_save=''):
     """ Repeat the experiment b times.
     This function perform b repetitions of (Dataset, Model, Ate) - set by the config/params file.
     :param params: dictinary
@@ -136,16 +136,16 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     n_seeds = params['seed']
 
     for seed in range(n_seeds):
-        params['seed'] = seed + previous
+        params['seed'] = seed
         print('seed ', seed)
         # logger.debug('seed', seed)
         for i in range(b):
             #params['config_name'] = params['data_name'] + '_' + params['model_name']
             params['config_name_seeds'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
-                table = range_source_p(params, table, source_size_p, b=i + previous)
+                table = range_source_p(params, table, source_size_p, b=i )
             else:
-                metrics, loss, ate, tau = run_model(params, model_seed=i + previous)
+                metrics, loss, ate, tau = run_model(params, model_seed=i )
                 table = organize(params, ate, tau, table, b=i)
         if save:
             table.to_csv(output_save + '.csv', sep=',')

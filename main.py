@@ -24,24 +24,25 @@ def main(paths_args):
     #if paths_args['load_previous_table']:
     #    table = pd.read_csv(paths_args['load_previous_table_path'], index_col=[0])
     #else:
-    #    table = pd.DataFrame()
+    table_all = pd.DataFrame()
 
     # Run models for all config files
     for config in configs:
         table = pd.DataFrame()
         params = hp.parameter_loader(config_path=config)
         output_path = paths_args['drive'] + 'table_' + params['config_name']
+        print('Config Name', params['config_name'])
         table = repeat_experiment(params, table, use_range_source_p=paths_args['use_range_source_p'],
-                                  save=paths_args['save'], output_save=output_path,
-                                  previous=paths_args['previous'])
+                                  save=paths_args['save'], output_save=output_path)
         table['mae_naive'] = table['tau'] - table['ate_naive_all']
         table['mae_aipw'] = table['tau'] - table['ate_aipw_all']
         table['mae_naive'] = np.abs(table['mae_naive'].values)
         table['mae_aipw'] = np.abs(table['mae_aipw'].values)
+        table_all = pd.concat([table_all, table])
         if paths_args['save']:
             table.to_csv(output_path + '.csv', sep=',')
 
-    return table
+    return table_all
 
 
 if __name__ == "__main__":
