@@ -151,7 +151,8 @@ def fit_causal_batle(epochs,
                      config_name='',
                      home_dir='',
                      episilon=None,
-                     weight_1=1):
+                     weight_1=1,
+                     use_validation_best=False):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
     :param home_dir:
@@ -215,6 +216,11 @@ def fit_causal_batle(epochs,
                      'backbone.dragonnet_head.decoder_layer.decoder_layer1_2',
                      'backbone.dragonnet_head.decoder_layer.decoder_layer1_3',
                      ]
+
+    if use_validation_best:
+        best_loss = 999
+        best_epoch = -1
+        best_model = None
 
     for e in range(epochs):
 
@@ -286,6 +292,13 @@ def fit_causal_batle(epochs,
             metric_val_t[e], metric_val_y[e] = lm_val['metric_t'], lm_val['metric_y']
             metric_val_d[e], metric_val_r[e] = lm_val['metric_d'], lm_val['metric_r']
 
+            if use_validation_best:
+                current_loss = alpha[0]*lm_val['loss_t']+ alpha[1]*lm_val['loss_y']+alpha[2]*lm_val['loss_d']+ alpha[3]*lm_val['loss_r']+alpha[4]*lm_val['loss_a']
+                if current_loss<best_loss:
+                    best_epoch = e
+                    best_loss = current_loss
+                    best_model = model.state_dict()
+
         else:
             loss_val_t[e], loss_val_y[e], loss_val_d[e], loss_val_r[e], loss_val_a[e] = None, None, None, None, None
             metric_val_t[e], metric_val_y[e], metric_val_d[e], metric_val_r[e] = None, None, None, None
@@ -302,6 +315,10 @@ def fit_causal_batle(epochs,
                       'metric_val_t': metric_val_t[e], 'metric_val_y': metric_val_y[e],
                       'metric_val_d': metric_val_d[e], 'metric_val_r': metric_val_r[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
+
+    if use_validation_best:
+        if best_epoch>0:
+            model.load_state_dict(best_model)
 
     # Calculating metrics on testing set - no dropout used here.
     lm_test = _calculate_loss_metric_noopti(model=model, loader=loader_test,
