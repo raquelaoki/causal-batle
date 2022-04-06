@@ -3,8 +3,8 @@ parameters:
     model_name: 'batle'
     config_name: 'ihdp_batle_04'
     ate_method_list: [ 'naive','aipw' ]
-    repetitions: 10
-    seed: 3
+    repetitions: 1
+    seed: 1
     max_epochs: 100
     batch_size: 250
     units1: 200

@@ -25,6 +25,7 @@ class causal_batle(nn.Module):
     Input: basic architecture, n_covariates (int).
     Return: nn.Module model.
     """
+
     def __init__(self, n_covariates, dropout_p=0.5, units1=200, units2=100, units3=1):
         super().__init__()
 
@@ -110,6 +111,7 @@ class causal_batle_head(nn.Module):
 
 class decoder(nn.Module):
     """Simple Autoenconder"""
+
     def __init__(self, n_covariates, units1):
         super(decoder, self).__init__()
         self.decoder_layer1_1 = nn.Linear(in_features=units1, out_features=units1)
@@ -293,8 +295,9 @@ def fit_causal_batle(epochs,
             metric_val_d[e], metric_val_r[e] = lm_val['metric_d'], lm_val['metric_r']
 
             if use_validation_best:
-                current_loss = alpha[0]*lm_val['loss_t']+ alpha[1]*lm_val['loss_y']+alpha[2]*lm_val['loss_d']+ alpha[3]*lm_val['loss_r']+alpha[4]*lm_val['loss_a']
-                if current_loss<best_loss:
+                current_loss = alpha[0] * lm_val['loss_t'] + alpha[1] * lm_val['loss_y'] + alpha[2] * lm_val['loss_d'] + \
+                               alpha[3] * lm_val['loss_r'] + alpha[4] * lm_val['loss_a']
+                if current_loss < best_loss:
                     best_epoch = e
                     best_loss = current_loss
                     best_model = model.state_dict()
@@ -317,8 +320,9 @@ def fit_causal_batle(epochs,
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
 
     if use_validation_best:
-        if best_epoch>0:
+        if best_epoch > 0:
             model.load_state_dict(best_model)
+            print('loading best validation epoch')
 
     # Calculating metrics on testing set - no dropout used here.
     lm_test = _calculate_loss_metric_noopti(model=model, loader=loader_test,
@@ -408,7 +412,7 @@ def criterion_function_t(batch, predictions, device='cpu', weight_1=None):
     t_predictions = predictions['t']
     d_obs = batch[3].to(device)
 
-    t_obs = batch[2].to(device)#[d_obs == 1]
+    t_obs = batch[2].to(device)  # [d_obs == 1]
     # Weights
     loss = -t_predictions.log_prob(t_obs)
     loss = loss[d_obs == 1]
@@ -421,8 +425,8 @@ def criterion_function_t(batch, predictions, device='cpu', weight_1=None):
 def criterion_function_y(batch, predictions, device='cpu'):
     y0_predictions, y1_predictions = predictions['y0'], predictions['y1']
     y_obs = batch[1].to(device)
-    #t_obs = batch[2].to(device)
-    #d_obs = batch[3].to(device)
+    # t_obs = batch[2].to(device)
+    # d_obs = batch[3].to(device)
     mask0 = np.logical_and(batch[2] == 0, batch[3] == 1).to(torch.bool).to(device)
     mask1 = np.logical_and(batch[2] == 1, batch[3] == 1).to(torch.bool).to(device)
     loss_y0_babch = -y0_predictions.log_prob(y_obs[mask0]).mean()
