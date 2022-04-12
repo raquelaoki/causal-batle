@@ -38,6 +38,10 @@ def main(paths_args):
         table['mae_aipw'] = table['tau'] - table['ate_aipw_all']
         table['mae_naive'] = np.abs(table['mae_naive'].values)
         table['mae_aipw'] = np.abs(table['mae_aipw'].values)
+        _print = params.get('print', False)
+        if _print:
+            table_stats = table[['config', 'source_size_p', 'mae_naive', 'mae_aipw']]
+            print(table_stats.groupby(['config', 'source_size_p']).mean())
         table_all = pd.concat([table_all, table])
         if paths_args['save']:
             table.to_csv(output_path + '.csv', sep=',')

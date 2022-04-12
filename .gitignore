@@ -11,6 +11,7 @@ config/
 config_debug_/
 config_used/
 config_use_range_p_/
+config_02/
 
 # Unit test / coverage reports
 .cache

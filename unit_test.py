@@ -76,8 +76,7 @@ class DataPrep(unittest.TestCase):
         params = _check_params_consistency(params)
 
         table = repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False,
-                                  save=False, output_save='',
-                                  previous=0)
+                                  save=False, output_save='')
         self.assertFalse(math.isnan(table['ate_naive_train'].values[0]), 'IHDP+CEVAE failed.')
 
 
