@@ -54,7 +54,6 @@ def make_model(params, binfeat=[], contfeat=[]):
                             bl.metric_function_dragonnet_y]
         fit = dragonnet.fit_dragonnet
         ate = ha.calculate_ate_bayesian
-
     elif params['model_name'] == 'aipw':
         model = aipw.aipw(n_covariates=params['n_covariates'])
         criterion = [aipw.criterion_function_aipw_t,
@@ -82,7 +81,6 @@ def make_model(params, binfeat=[], contfeat=[]):
                             cb.metric_function_reconstruction]
         fit = cb.fit_causal_batle
         ate = ha.calculate_ate_bayesian
-        logger.debug('Implementation in progress')
     elif params['model_name'] == 'cevae':
         model = cevae.cevae(n_covariates=params['n_covariates'],
                             binfeat=binfeat,
@@ -163,7 +161,7 @@ def fit_wrapper(params,
                                loader_val=loader_val,
                                alpha=alpha,
                                path_logger=path_logger,
-                               config_name=params['config_name'],
+                               config_name=params['config_name_seeds'],
                                home_dir=params['home_dir'],
                                episilon=params['episilon'],  # Only used by dragonnet
                                weight_1=params['weight_1'] , # Only used by causal batle

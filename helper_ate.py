@@ -153,7 +153,7 @@ def _make_predictions_dropout(data_loader, model, device, forward_passes, filter
     """
     y_obs, t_obs = np.array([]), np.array([])
     y0_pred_mean, y1_pred_mean, t_pred_mean = np.array([]), np.array([]), np.array([])
-
+    model.train()
     for i, batch in enumerate(data_loader):
 
         predictions = model(batch[0].to(device))
@@ -166,6 +166,8 @@ def _make_predictions_dropout(data_loader, model, device, forward_passes, filter
         for j in range(forward_passes - 1):
             predictions = model(batch[0].to(device))
             t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
+            #print('foward '+str(j), ' ',t_predictions.mean.cpu().detach().numpy().reshape(-1, 1)[0:5],
+            #      y0_predictions.mean.cpu().detach().numpy().reshape(-1, 1)[0:5])
             y0_pred = np.concatenate([y0_pred, y0_predictions.mean.cpu().detach().numpy().reshape(-1, 1)], 1)
             y1_pred = np.concatenate([y1_pred, y1_predictions.mean.cpu().detach().numpy().reshape(-1, 1)], 1)
             t_pred = np.concatenate([t_pred, t_predictions.mean.cpu().detach().numpy().reshape(-1, 1)], 1)

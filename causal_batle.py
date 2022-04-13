@@ -417,7 +417,9 @@ def criterion_function_t(batch, predictions, device='cpu', weight_1=None):
     loss = loss[d_obs == 1]
 
     weights = [weight_1 if item == 0 else 1 for item in t_obs[d_obs == 1]]
-    loss = torch.mul(loss, torch.Tensor(weights).to(device))
+    weights = torch.Tensor(weights)
+    weights.requires_grad = False
+    loss = torch.mul(loss, weights.to(device))
     return loss.mean()
 
 

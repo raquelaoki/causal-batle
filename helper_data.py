@@ -145,7 +145,6 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
     """
     if use_source:
         logger.debug('... combining source and target domains data.')
-
         if data_x_source:
             s_x = data_x_source
             t_x, t_y, t_t = data_x, data_y, data_t

@@ -35,8 +35,8 @@ def run_model(params, model_seed=0):
     """
 
     success = False
+    #params['seed_add_on'] = 0
     while not success:
-    #if success:
         try:
             data, tau = make_data(params)
             tloader_train, tloader_val, tloader_test, tloader_all = data.loader(batch=params['batch_size'])
@@ -55,7 +55,7 @@ def run_model(params, model_seed=0):
         except ValueError:
             model_seed = model_seed + 1
             params['seed_add_on'] = params['seed_add_on']+1
-            print('...value error')
+            #print('...value error')
 
     return metrics, loss, ate, tau
 
@@ -80,7 +80,7 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
     out = {
         'model_name': params['model_name'],
         'data_name': params['data_name'],
-        'config': params['config_name'],
+        'config': params['data_name']+'_'+params['model_name'],
         'config_rep': params['config_name_seeds'],
         'tau': tau,
         'b': b,
@@ -128,11 +128,13 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
         params['seed'] = seed
         print('seed ', seed)
         logger.debug('seed '+str(seed))
+        config_name = params['config_name']
         for i in range(b):
-            params['config_name_seeds'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
                 table = range_source_p(params, table, source_size_p, b=i)
             else:
+                params['config_name_seeds'] = config_name + '_' + 'seed' + str(
+                    params['seed']) + '_' + 'b' + str(i)
                 metrics, loss, ate, tau = run_model(params, model_seed=i)
                 table = organize(params, ate, tau, table, b=i)
         if save:
@@ -156,17 +158,13 @@ def range_source_p(params, table, source_size_p=None, b=1):
         source_size_p = [0.2, 0.4, 0.6, 0.8]
     else:
         assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
-    #config_name_seeds = params['config_name_seeds']
     condig_name = params['config_name']
     for p in source_size_p:
-        params['config_name'] = params['config_name_seeds'] + '_' + str(p)
+        params['config_name'] = condig_name + '_' + str(p) + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(b)
         params['source_size_p'] = p
-        #if params['model_name'] == 'batle':
-        #    if p > 0.6:
-        #        params['alpha'] = [1, 4, 1, 1, 4]
+        params['config_name_seeds'] = params['config_name']
         metrics, loss, ate, tau = run_model(params, model_seed=b)
         table = organize(params, ate, tau, table, b=b)
 
-    #params['config_name_seeds'] = config
     params['config_name'] = condig_name
     return table
