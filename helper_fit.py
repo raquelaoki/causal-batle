@@ -134,11 +134,6 @@ def fit_wrapper(params,
     logger.debug("...fitting %s", params['model_name'])
     logger.debug("...using %s", device)
 
-    # TODO: implement
-    if use_validation:
-        best_metric_y_val = 999
-        best_epoch = 0
-
     if use_tensorboard:
         path_logger = params.get('path_tensorboard', 'logs/')
     else:

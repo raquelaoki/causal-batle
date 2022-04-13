@@ -33,15 +33,13 @@ def run_model(params, model_seed=0):
     :param model_seed: int
     :return metrics, loss and ate dictionaries, tau (true treatment effect value)
     """
-    data, tau = make_data(params)
 
-    tloader_train, tloader_val, tloader_test, tloader_all = data.loader(batch=params['batch_size'],
-                                                                        seed=params['seed']
-                                                                        )
     success = False
-    # while not success:
-    if success:
+    while not success:
+    #if success:
         try:
+            data, tau = make_data(params)
+            tloader_train, tloader_val, tloader_test, tloader_all = data.loader(batch=params['batch_size'])
             metrics, loss, ate = hfit.fit_wrapper(params=params,
                                                   loader_train=tloader_train,
                                                   loader_test=tloader_test,
@@ -55,21 +53,10 @@ def run_model(params, model_seed=0):
                                                   )
             success = True
         except ValueError:
-            # params['seed'] = params['seed'] + 1
             model_seed = model_seed + 1
+            params['seed_add_on'] = params['seed_add_on']+1
             print('...value error')
-    else:
-        metrics, loss, ate = hfit.fit_wrapper(params=params,
-                                              loader_train=tloader_train,
-                                              loader_test=tloader_test,
-                                              loader_all=tloader_all,
-                                              loader_val=tloader_val,
-                                              use_validation=params['use_validation'],
-                                              use_tensorboard=params['use_tensorboard'],
-                                              model_seed=model_seed,
-                                              binfeat=data.binfeat,
-                                              contfeat=data.contfeat
-                                              )
+
     return metrics, loss, ate, tau
 
 
@@ -124,6 +111,8 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
                       save=False, output_save=''):
     """ Repeat the experiment b times.
     This function perform b repetitions of (Dataset, Model, Ate) - set by the config/params file.
+    :param output_save:
+    :param save:
     :param params: dictinary
     :param table: pd.DataFrame() - if not given, a new dataframe will be created.
     :param use_range_source_p: Bool, if true, we explore a range of source_size_p values (valid only for GWAS and IHDP)
@@ -138,14 +127,13 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     for seed in range(n_seeds):
         params['seed'] = seed
         print('seed ', seed)
-        # logger.debug('seed', seed)
+        logger.debug('seed '+str(seed))
         for i in range(b):
-            #params['config_name'] = params['data_name'] + '_' + params['model_name']
             params['config_name_seeds'] = params['config_name'] + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(i)
             if use_range_source_p:
-                table = range_source_p(params, table, source_size_p, b=i )
+                table = range_source_p(params, table, source_size_p, b=i)
             else:
-                metrics, loss, ate, tau = run_model(params, model_seed=i )
+                metrics, loss, ate, tau = run_model(params, model_seed=i)
                 table = organize(params, ate, tau, table, b=i)
         if save:
             table.to_csv(output_save + '.csv', sep=',')
@@ -173,9 +161,9 @@ def range_source_p(params, table, source_size_p=None, b=1):
     for p in source_size_p:
         params['config_name'] = params['config_name_seeds'] + '_' + str(p)
         params['source_size_p'] = p
-        if params['model_name'] == 'batle':
-            if p > 0.6:
-                params['alpha'] = [1, 4, 1, 1, 4]
+        #if params['model_name'] == 'batle':
+        #    if p > 0.6:
+        #        params['alpha'] = [1, 4, 1, 1, 4]
         metrics, loss, ate, tau = run_model(params, model_seed=b)
         table = organize(params, ate, tau, table, b=b)
 

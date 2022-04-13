@@ -71,6 +71,7 @@ def _check_params_consistency(params):
     # Adding default values
     params['ate_method_list'] = params.get('ate_method_list', ['naive', 'ipw'])
     params['repetitions'] = params.get('repetitions', 10)
+    params['seed_add_on'] = params.get('seed_add_on', 0)
     params['max_epochs'] = params.get('max_epochs', 50)
     params['shuffle'] = params.get('shuffle', False)
     params['batch_size'] = params.get('batch_size', 50)

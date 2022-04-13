@@ -7,7 +7,6 @@ from sklearn.preprocessing import StandardScaler
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-
 # Local Imports
 import CompBioAndSimulated_Datasets.simulated_data_binarycause as bcdata  # local library / github repo
 import helper_parameters as hp
@@ -49,7 +48,7 @@ class DataTargetAndSource:
         self.binfeat = binfeat
         self.contfeat = contfeat
 
-    def loader(self, batch=32, seed=0):
+    def loader(self, batch=32):
         # Creating TensorDataset to use in the DataLoader.
         dataset_train = TensorDataset(Tensor(self.x_train), Tensor(self.y_train),
                                       Tensor(self.t_train), Tensor(self.d_train))
@@ -59,14 +58,16 @@ class DataTargetAndSource:
                                     Tensor(self.t), Tensor(self.d))
 
         # Required: Create DataLoader for training the models.
+        max_size = int(np.min([len(self.t_test), batch * 4]))
+
         loader_train = DataLoader(dataset_train, shuffle=True, batch_size=batch)
-        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=batch*4)
+        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=max_size)
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
 
         if self.use_validation:
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val),
                                         Tensor(self.t_val), Tensor(self.d_val))
-            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=batch*4)
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=max_size)
         else:
             loader_val = None
 
@@ -79,11 +80,12 @@ class DataTarget:
         self.use_validation = use_validation
 
         x_train, x_test, y_train, y_test, t_train, t_test = train_test_split(x, y, t,
-                                                                             test_size=test_size, random_state=seed)
+                                                                             test_size=test_size,
+                                                                             random_state=seed + 100)
         if self.use_validation:
             x_train, x_val, y_train, y_val, t_train, t_val = train_test_split(x_train, y_train, t_train,
                                                                               test_size=test_size / 2,
-                                                                              random_state=seed)
+                                                                              random_state=seed + 100)
             self.x_val = x_val
             self.y_val = y_val.reshape(-1, 1)
             self.t_val = t_val.reshape(-1, 1)
@@ -99,28 +101,29 @@ class DataTarget:
         self.binfeat = binfeat
         self.contfeat = contfeat
 
-    def loader(self, batch=32, seed=0):
+    def loader(self, batch=32):
         # Creating TensorDataset to use in the DataLoader.
         dataset_train = TensorDataset(Tensor(self.x_train), Tensor(self.y_train), Tensor(self.t_train))
         dataset_test = TensorDataset(Tensor(self.x_test), Tensor(self.y_test), Tensor(self.t_test))
         dataset_all = TensorDataset(Tensor(self.x), Tensor(self.y), Tensor(self.t))
 
         # Required: Create DataLoader for training the models.
+        max_size = int(np.min([len(self.t_test), batch * 4]))
         loader_train = DataLoader(dataset_train, shuffle=True, batch_size=batch)
-        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=batch)
+        loader_test = DataLoader(dataset_test, shuffle=False, batch_size=max_size)
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch)
 
         if self.use_validation:
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val), Tensor(self.t_val))
-            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=batch)
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=max_size)
         else:
             loader_val = None
 
         return loader_train, loader_val, loader_test, loader_all
 
 
-def make_Data(data_x, data_t, data_y, data_x_source=None, seed=1, source_size=0.2, test_size=0.33,
-              use_validation=False, use_source=False, binfeat=[], contfeat=[]):
+def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_size=0.2, test_size=0.33,
+                   use_validation=False, use_source=False, binfeat=[], contfeat=[], seed_add_on=0):
     """ It creates the data classes (DataTarget or DataTargetAndSource) from input data data_x, data_t, data_y.
     VALID ONLY FOR GWAS AND IHDP.
     It will alwyas split the dataset using source_size, even it the method only uses the target data
@@ -147,18 +150,18 @@ def make_Data(data_x, data_t, data_y, data_x_source=None, seed=1, source_size=0.
             s_x = data_x_source
             t_x, t_y, t_t = data_x, data_y, data_t
         else:
-            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed * 10,
+            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed+3+seed_add_on,
                                                         test_size=source_size)
 
         n_source = s_x.shape[0]
         n_target = t_x.shape[0]
 
         x = np.concatenate([s_x, t_x], axis=0)
-        t = np.concatenate([np.zeros(n_source).reshape(-1,1), t_t.reshape(-1,1)], axis=0)
-        y = np.concatenate([np.zeros(n_source).reshape(-1,1), t_y.reshape(-1,1)], axis=0)
+        t = np.concatenate([np.zeros(n_source).reshape(-1, 1), t_t.reshape(-1, 1)], axis=0)
+        y = np.concatenate([np.zeros(n_source).reshape(-1, 1), t_y.reshape(-1, 1)], axis=0)
         d = np.concatenate([np.zeros(n_source), np.ones(n_target)], axis=0)
 
-        np.random.seed(seed)
+        np.random.seed(seed+seed_add_on)
         permutation = np.random.permutation(len(y))
         x = x[permutation]
         t = t[permutation]
@@ -171,11 +174,17 @@ def make_Data(data_x, data_t, data_y, data_x_source=None, seed=1, source_size=0.
     else:
         logger.debug('... using only target domain data.')
 
-        s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed * 10,
+        s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t,
+                                                    random_state=seed+3+seed_add_on,
                                                     test_size=source_size)
         t_x = t_x.values
+        np.random.seed(seed + seed_add_on)
+        permutation = np.random.permutation(len(t_y))
+        t_x = t_x[permutation]
+        t_t = t_t[permutation]
+        t_y = t_y[permutation]
         data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size,
-                          binfeat=binfeat,contfeat=contfeat)
+                          binfeat=binfeat, contfeat=contfeat)
     return data
 
 
@@ -216,16 +225,17 @@ def make_gwas(params, unit_test=False):
         data_t = np.array(data_t)
 
     data_t = data_t.reshape(-1)
-    data = make_Data(data_x=data_x,
-                     data_y=data_y,
-                     data_t=data_t,
-                     seed=seed,
-                     source_size=params['source_size_p'],
-                     use_validation=params['use_validation'],
-                     use_source=params['use_source'],
-                     binfeat=[],
-                     contfeat=list(range(data_x.shape[1]))
-                     )
+    data = make_DataClass(data_x=data_x,
+                          data_y=data_y,
+                          data_t=data_t,
+                          seed=seed,
+                          source_size=params['source_size_p'],
+                          use_validation=params['use_validation'],
+                          use_source=params['use_source'],
+                          binfeat=[],
+                          contfeat=list(range(data_x.shape[1])),
+                          seed_add_on=params['seed_add_on']
+                          )
     return data, tau[0]  # treatment_effects[treatment_columns]
 
 
@@ -236,18 +246,20 @@ def make_ihdp(params):
     :return:
     """
     seed = params['seed']
-    assert 0 <= seed <= 8, 'Seed/Id out of range (0-8) ---'+str(seed)
+    assert 0 <= seed <= 8, 'Seed/Id out of range (0-8) ---' + str(seed)
     data_setting = bcdata.ihdp_data(path='/content/data/ihdp/', id=seed)
     data_x, data_y, data_t, tau = data_setting.generate_samples()
 
-    data = make_Data(data_x=data_x,
-                     data_y=data_y,
-                     data_t=data_t,
-                     seed=seed,
-                     source_size=params['source_size_p'],
-                     use_validation=params['use_validation'],
-                     use_source=params['use_source'],
-                     binfeat=list(range(6, 25)),
-                     contfeat=list(range(6)))
+    data = make_DataClass(data_x=data_x,
+                          data_y=data_y,
+                          data_t=data_t,
+                          seed=seed,
+                          source_size=params['source_size_p'],
+                          use_validation=params['use_validation'],
+                          use_source=params['use_source'],
+                          binfeat=list(range(6, 25)),
+                          contfeat=list(range(6)),
+                          seed_add_on=params['seed_add_on'],
+                          )
 
     return data, tau
