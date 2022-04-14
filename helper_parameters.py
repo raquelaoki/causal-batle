@@ -141,8 +141,8 @@ def _check_params_consistency(params):
         params['filter_d'] = True
         params['weight_1'] = 2
         assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
-    elif params['model_name'] == 'cevae':
-        params['ate_method_list'] = ['naive']
+    #elif params['model_name'] == 'cevae':
+    #    params['ate_method_list'] = ['naive']
     else:
         logger.debug('%s not implemented', params['model_name'])
 

@@ -95,6 +95,7 @@ def _make_predictions_cevae(data_loader, model, device, place_holder, filter_d=F
     # https://github.com/rik-helwegen/CEVAE_pytorch/blob/master/evaluation.py
     y_obs, t_obs = np.array([]), np.array([])
     y0_pred, y1_pred = np.array([]), np.array([])
+    t_pred = np.array([])
     for i, batch in enumerate(data_loader):
         y_obs = np.concatenate([y_obs.reshape(-1), batch[1].reshape(-1)], 0)
         t_obs = np.concatenate([t_obs.reshape(-1), batch[2].reshape(-1)], 0)
@@ -103,18 +104,18 @@ def _make_predictions_cevae(data_loader, model, device, place_holder, filter_d=F
         xy = torch.cat((batch[0].to(device), y_infer.mean), 1)
         z_infer = model.q_z_tyx_dist(xy=xy, t=batch[2].to(device))
         # Manually input zeros and ones
-        y0 = model.p_y_zt_dist(z_infer.mean, torch.zeros(z_infer.mean.shape).to(device)).mean
-        y1 = model.p_y_zt_dist(z_infer.mean, torch.ones(z_infer.mean.shape).to(device)).mean
+        y0 = model.p_y_zt_dist(z_infer.mean, torch.zeros(1).to(device)).mean
+        y1 = model.p_y_zt_dist(z_infer.mean, torch.ones(1).to(device)).mean
         #return y0.cpu().detach().numpy(), y1.cpu().detach().numpy()
-
-        #t_predictions, y0_predictions, y1_predictions = predictions['t'], predictions['y0'], predictions['y1']
-
+        t = model.p_t_z_dist(z_infer.mean).mean
         y0_pred = np.concatenate([y0_pred.reshape(-1), y0.cpu().detach().numpy().reshape(-1)], 0)
         y1_pred = np.concatenate([y1_pred.reshape(-1), y1.cpu().detach().numpy().reshape(-1)], 0)
+        t_pred  = np.concatenate([ t_pred.reshape(-1),  t.cpu().detach().numpy().reshape(-1)], 0)
 
-    t_pred = None
+    y0_pred = y0_pred.reshape(-1)
+    y1_pred = y1_pred.reshape(-1)
+    t_pred = t_pred.reshape(-1)
     return t_pred, y0_pred, y1_pred, t_obs, y_obs
-
 
 
 def _make_predictions_regular(data_loader, model, device, place_holder, filter_d=False):

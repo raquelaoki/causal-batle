@@ -78,7 +78,7 @@ def cevae_pred(model, batch, device):
             'y_infer': y_infer,
             'p_z_dist': model.p_z_dist,
             'z_infer': z_infer,
-            'z_infer_sample':z_infer_sample
+            'z_infer_sample': z_infer_sample
             }
 
     return pred

@@ -123,6 +123,7 @@ To run the unit tests in Colab, we use:
 * add gwas
 * add bayesian layers 
 * IN CONSTRUCTION
+* CEVAE: https://github.com/rik-helwegen/CEVAE_pytorch/
 
 ## Compute Canada Instructions (not used)
 
@@ -185,12 +186,12 @@ Tensorboard
 %tensorboard --logdir logs
 ```
 
-### TODO:
-1) Save model based on validation;
-2) Add main on unit_test.py
-3) Add cevae; 
-4) Add dr-cfr;
-5) Add X-learner;
-6) Add new dataset (vision);
-7) Add BCCH dataset;
-8) sensitive analysis. 
+## TODO:
+2) Add dr-cfr;
+3) Add X-learner;
+4) Add new dataset (vision);
+5) Add BCCH dataset;
+   * make a zip file easy to drop on colab 
+   * edit CompBioAndSimulated_Datasets to load/simulate Y
+   * allow several magnitues of tau ('knob')
+
