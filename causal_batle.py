@@ -80,7 +80,7 @@ class causal_batle_head(nn.Module):
 
         #epsilon
         self.epsilon_weight = nn.Parameter(torch.rand([1]), requires_grad=True)
-        self.t_weight = nn.Parameter(torch.rand([1]), requires_grad=True)
+        self.t_weight = nn.Parameter(torch.tensor([2.0]), requires_grad=True)
 
     def forward(self, inputs):
         # Inputs = backbone output
