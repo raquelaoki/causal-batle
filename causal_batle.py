@@ -198,8 +198,6 @@ def fit_causal_batle(epochs,
     elif not torch.is_tensor(alpha):
         alpha = torch.tensor(alpha)
 
-    print('len alpha', len(alpha), alpha)
-    print('len cri', len(criterion))
     assert len(alpha) == len(criterion), 'Loss weights do not match number of losses'
 
     loss_train_t, metric_train_t = np.zeros(epochs), np.zeros(epochs)  # _t: propensity score loss
