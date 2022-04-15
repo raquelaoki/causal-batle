@@ -61,3 +61,36 @@ def metric_function_dragonnet_y(batch, predictions):
     y_pred = pred0 * (1 - t_obs) + pred1 * t_obs
     return mean_squared_error(batch[1], y_pred)
 
+
+def criterion_function_dragonnet_targeted(batch, predictions, device='cpu'):
+    y_obs = batch[1].to(device)
+    t_obs = batch[2].to(device)
+    t_predictions = predictions['t'].sample([1,1]).reshape(-1,1).cpu().detach().numpy()
+    y0_predictions = predictions['y0'].sample([1, 1]).reshape(-1, 1).cpu().detach().numpy()
+    y1_predictions = predictions['y1'].sample([1, 1]).reshape(-1, 1).cpu().detach().numpy()
+    epsilon = predictions['epsilon']
+    y_pred = y0_predictions * (1 - t_obs) + y1_predictions * t_obs
+    criterion = TargetedLoss()
+    return criterion(y_obs=y_obs, y_pred=y_pred, t_obs=t_obs, t_pred=t_predictions, epsilon=epsilon)
+
+
+class TargetedLoss(nn.Module):
+    """
+    Reference: (https://arxiv.org/pdf/1906.02120.pdf)
+    """
+
+    def __init__(self):
+        super(TargetedLoss, self).__init__()
+
+    def forward(self, y_obs, y_pred, t_obs, t_pred, epsilon):
+        t_pred = (t_pred + 0.01) / 1.02
+        t1 = torch.div(t_obs, t_pred)
+        t0 = torch.div(torch.sub(1, t_obs), torch.sub(1, t_pred))
+        epsilon = epsilon.reshape(-1,1)
+        t = torch.mul(torch.sub(t1, t0), epsilon)
+        # epislon == 0 -> t is not used and result should be equal to rmse error
+        pred = torch.add(y_pred, t)
+        loss = torch.sub(y_obs, pred)
+        loss = torch.pow(loss, 2)
+        return torch.mean(loss)
+

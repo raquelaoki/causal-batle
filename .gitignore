@@ -8,10 +8,8 @@ __pycache__/
 # Baselines repo
 CompBioAndSimulated_Datasets/
 config/
-config_debug_/
 config_used/
-config_use_range_p_/
-config_02/
+config_debug/
 
 # Unit test / coverage reports
 .cache

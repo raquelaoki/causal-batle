@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, roc_auc_score
 from torch import Tensor
-#from torch.utils.data import Dataset, DataLoader, TensorDataset
+# from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 # Local imports
 import utils
@@ -51,11 +51,11 @@ class dragonnet(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.use_dropout = use_dropout
         self.dropout_p = dropout_p
-        self.batchnorm = nn.BatchNorm1d(self.units1)
+        self.batchnorm = nn.Identity() #nn.BatchNorm1d(self.units1)
         if self.use_dropout:
             self.dropout = nn.Dropout(p=self.dropout_p)
         else:
-            self.dropout = nn.Dropout(p=0)
+            self.dropout = nn.Identity()
 
     def forward(self, inputs):
         """
@@ -100,7 +100,7 @@ class dragonnet_head(nn.Module):
         if self.use_dropout:
             self.dropout = nn.Dropout(p=self.dropout_p)
         else:
-            self.dropout = nn.Dropout(p=0)
+            self.dropout = nn.Identity()
 
         if self.bayesian:
             # Returns outcome density
@@ -113,6 +113,8 @@ class dragonnet_head(nn.Module):
             self.outcome_layer_1 = nn.Linear(in_features=self.units2, out_features=self.units3)
             self.t_predictions = nn.Linear(in_features=self.units1, out_features=1)
             self.sigmoid = nn.Sigmoid()
+
+        self.epsilon_weight = nn.Parameter(torch.rand([1]), requires_grad=True)
 
     def forward(self, inputs):
         # Treatment specific - first layer.
@@ -129,9 +131,13 @@ class dragonnet_head(nn.Module):
 
         t_predictions = self.sigmoid(self.t_predictions(self.dropout(inputs)))
 
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        epsilon = self.epsilon_weight*torch.ones(inputs.shape[0]).to(device)
+
         predictions = {'y0': y0_predictions,
                        'y1': y1_predictions,
-                       't': t_predictions}
+                       't': t_predictions,
+                       'epsilon': epsilon}
 
         return predictions
 
@@ -148,14 +154,15 @@ def metric_function_dragonnet_y(batch, predictions):
     return mean_squared_error(batch[1], y_pred)
 
 
-def criterion_function_dragonnet_targeted(batch, predictions, device='cpu', episilon=0.001):
+def criterion_function_dragonnet_targeted(batch, predictions, device='cpu'):
     y_obs = batch[1].to(device)
     t_obs = batch[2].to(device)
     t_predictions = predictions['t']
     y0_predictions, y1_predictions = predictions['y0'], predictions['y1']
+    epsilon = predictions['epsilon']
     y_pred = y0_predictions * (1 - t_obs) + y1_predictions * t_obs
     criterion = TargetedLoss()
-    return criterion(y_obs=y_obs, y_pred=y_pred, t_obs=t_obs, t_pred=t_predictions, episilon=episilon)
+    return criterion(y_obs=y_obs, y_pred=y_pred, t_obs=t_obs, t_pred=t_predictions, epsilon=epsilon)
 
 
 class TargetedLoss(nn.Module):
@@ -166,11 +173,15 @@ class TargetedLoss(nn.Module):
     def __init__(self):
         super(TargetedLoss, self).__init__()
 
-    def forward(self, y_obs, y_pred, t_obs, t_pred, episilon=0.001):
-        t1 = torch.div(t_obs, torch.add(t_pred, 0.01))
-        t0 = torch.div(torch.sub(1, t_obs), torch.add(torch.sub(1, t_pred), 0.01))
-        t = torch.mul(torch.sub(t1, t0), episilon)
+    def forward(self, y_obs, y_pred, t_obs, t_pred, epsilon):
+        t_pred = (t_pred + 0.01) / 1.02
+        t1 = torch.div(t_obs, t_pred)
+        t0 = torch.div(torch.sub(1, t_obs), torch.sub(1, t_pred))
+        epsilon = epsilon.reshape(-1,1)
+        t = torch.mul(torch.sub(t1, t0), epsilon)
+
         # epislon == 0 -> t is not used and result should be equal to rmse error
+
         pred = torch.add(y_pred, t)
         loss = torch.sub(y_obs, pred)
         loss = torch.pow(loss, 2)
@@ -196,14 +207,14 @@ def criterion_function_dragonnet_y(batch, predictions, device='cpu'):
 
 
 def _calculate_criterion_dragonnet(criterion_function, batch, predictions, device='cpu',
-                                   alpha=[1, 1, 0], episilon=0.001):
+                                   alpha=[1, 1, 0]):
     loss_t = criterion_function[0](batch=batch, predictions=predictions, device=device)
     loss_y = criterion_function[1](batch=batch, predictions=predictions, device=device)
 
     if alpha[-1] == 0:
         loss_target = torch.tensor([0]).to(device)
     else:
-        loss_target = criterion_function[2](batch=batch, predictions=predictions, device=device, episilon=episilon)
+        loss_target = criterion_function[2](batch=batch, predictions=predictions, device=device)
 
     return loss_t, loss_y, loss_target
 
@@ -231,13 +242,11 @@ def fit_dragonnet(epochs,
                   path_logger='',
                   config_name='',
                   home_dir='',
-                  episilon=0.001,
                   weight_1=1,
                   use_validation_best=False,
                   ):
     """
     Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
-    :param episilon:
     :param home_dir:
     :param config_name:
     :param path_logger:
@@ -304,8 +313,7 @@ def fit_dragonnet(epochs,
                                                                                         batch=batch,
                                                                                         predictions=predictions,
                                                                                         device=device,
-                                                                                        alpha=alpha,
-                                                                                        episilon=episilon)
+                                                                                        alpha=alpha)
 
             # Calculate tarnet loss
             loss_batch = alpha[0] * loss_batch_t + alpha[1] * loss_batch_y + alpha[2] * loss_batch_tar
@@ -335,8 +343,7 @@ def fit_dragonnet(epochs,
                                                                                           batch=batch,
                                                                                           predictions=predictions,
                                                                                           device=device,
-                                                                                          alpha=alpha,
-                                                                                          episilon=episilon)
+                                                                                          alpha=alpha)
 
             metric_val_t[e], metric_val_y[e] = _calculate_metric_dragonnet(metric_functions=metric_functions,
                                                                            batch=batch,

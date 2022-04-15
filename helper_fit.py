@@ -49,7 +49,8 @@ def make_model(params, binfeat=[], contfeat=[]):
                                     dropout_p=params['dropout_p']
                                     )
         criterion = [bl.criterion_function_dragonnet_t,
-                     bl.criterion_function_dragonnet_y]
+                     bl.criterion_function_dragonnet_y,
+                     bl.criterion_function_dragonnet_targeted]
         metric_functions = [bl.metric_function_dragonnet_t,
                             bl.metric_function_dragonnet_y]
         fit = dragonnet.fit_dragonnet
@@ -72,6 +73,7 @@ def make_model(params, binfeat=[], contfeat=[]):
                                 dropout_p=params['dropout_p'])
         criterion = [cb.criterion_function_t,
                      cb.criterion_function_y,
+                     cb.criterion_function_dragonnet_targeted,
                      cb.criterion_function_discriminator,
                      cb.criterion_function_reconstruction,
                      cb.criterion_function_adversarial]  # Missing adversarial
@@ -163,7 +165,6 @@ def fit_wrapper(params,
                                path_logger=path_logger,
                                config_name=params['config_name_seeds'],
                                home_dir=params['home_dir'],
-                               episilon=params['episilon'],  # Only used by dragonnet
                                weight_1=params['weight_1'] , # Only used by causal batle
                                use_validation_best=params['use_validation_best']
                                )

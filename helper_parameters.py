@@ -91,7 +91,6 @@ def _check_params_consistency(params):
     params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
     params['type_original'] = params.get('type_original', True)  # Original Dragonnet
     params['filter_d'] = params.get('filter_d', False)  #  Battle only
-    params['episilon'] = params.get('episilon', 0.005)  # Used only for dragonnet (Targeted Loss).
     params['weight_1'] = params.get('weight_1', 1)
 
     assert params['data_name'] in valid_data_names, 'data_name not implemented!'

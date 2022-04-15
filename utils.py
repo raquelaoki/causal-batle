@@ -35,7 +35,6 @@ def run_model(params, model_seed=0):
     """
 
     success = False
-    #params['seed_add_on'] = 0
     while not success:
         try:
             data, tau = make_data(params)
@@ -55,7 +54,7 @@ def run_model(params, model_seed=0):
         except ValueError:
             model_seed = model_seed + 1
             params['seed_add_on'] = params['seed_add_on']+1
-            #print('...value error')
+            print('...value error')
 
     return metrics, loss, ate, tau
 
@@ -135,6 +134,7 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
             else:
                 params['config_name_seeds'] = config_name + '_' + 'seed' + str(
                     params['seed']) + '_' + 'b' + str(i)
+                print(params['config_name_seeds'])
                 metrics, loss, ate, tau = run_model(params, model_seed=i)
                 table = organize(params, ate, tau, table, b=i)
         if save:
