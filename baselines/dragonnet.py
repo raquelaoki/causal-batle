@@ -242,7 +242,6 @@ def fit_dragonnet(epochs,
                   path_logger='',
                   config_name='',
                   home_dir='',
-                  weight_1=1,
                   use_validation_best=False,
                   ):
     """

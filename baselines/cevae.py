@@ -117,7 +117,7 @@ def criterion_l6l7(batch, predictions, device='cpu'):
 
 
 def _calculate_criterion_cevae(criterion_function, batch, predictions, device='cpu',
-                               alpha=[1, 1, 0], episilon=0.001,
+                               alpha=[1, 1, 0],
                                contfeat=None, binfeat=None, z_infer_sample=None):
     l1, l2 = criterion_function[0](batch=batch, predictions=predictions, device=device,
                                    binfeat=binfeat, contfeat=contfeat)
@@ -188,8 +188,6 @@ def fit_cevae(epochs,
               path_logger='',
               config_name='',
               home_dir='',
-              episilon=0.001,
-              weight_1=1,
               use_validation_best=False,
               ):
     """
@@ -261,7 +259,6 @@ def fit_cevae(epochs,
                                                                     predictions=predictions,
                                                                     device=device,
                                                                     alpha=alpha,
-                                                                    episilon=episilon,
                                                                     binfeat=model.binfeat,
                                                                     contfeat=model.contfeat,
                                                                     z_infer_sample=predictions['z_infer_sample']
@@ -296,7 +293,6 @@ def fit_cevae(epochs,
                                                                     predictions=predictions,
                                                                     device=device,
                                                                     alpha=alpha,
-                                                                    episilon=episilon,
                                                                     binfeat=model.binfeat,
                                                                     contfeat=model.contfeat,
                                                                     z_infer_sample=predictions['z_infer_sample']

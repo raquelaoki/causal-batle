@@ -91,7 +91,6 @@ def _check_params_consistency(params):
     params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
     params['type_original'] = params.get('type_original', True)  # Original Dragonnet
     params['filter_d'] = params.get('filter_d', False)  #  Battle only
-    params['weight_1'] = params.get('weight_1', 1)
 
     assert params['data_name'] in valid_data_names, 'data_name not implemented!'
     assert params['model_name'] in valid_model_names, 'model_name not implemented!'
@@ -104,7 +103,7 @@ def _check_params_consistency(params):
         params['use_overlap_knob'] = params.get('use_overlap_knob', False)
         params['overlap_knob'] = params.get('overlap_knob', 1)
     elif params['data_name'] == 'ihdp':
-        assert 0 <= params['seed'] < 9, 'Seed out of range (0,9)'
+        assert 0 <= params['seed'] <= 9, 'Seed out of range (0,9)'
         params['n_covariates'] = params.get('n_covariates', 25)
         params['n_sample'] = params.get('n_sample', 747)
     else:
@@ -138,7 +137,6 @@ def _check_params_consistency(params):
         params['use_source'] = True
         params['type_original'] = False
         params['filter_d'] = True
-        params['weight_1'] = 2
         assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
     #elif params['model_name'] == 'cevae':
     #    params['ate_method_list'] = ['naive']

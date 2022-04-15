@@ -65,9 +65,9 @@ def metric_function_dragonnet_y(batch, predictions):
 def criterion_function_dragonnet_targeted(batch, predictions, device='cpu'):
     y_obs = batch[1].to(device)
     t_obs = batch[2].to(device)
-    t_predictions = predictions['t'].sample([1,1]).reshape(-1,1).cpu().detach().numpy()
-    y0_predictions = predictions['y0'].sample([1, 1]).reshape(-1, 1).cpu().detach().numpy()
-    y1_predictions = predictions['y1'].sample([1, 1]).reshape(-1, 1).cpu().detach().numpy()
+    t_predictions = predictions['t'].sample([1,1]).reshape(-1,1)#.cpu().detach().numpy()
+    y0_predictions = predictions['y0'].sample([1, 1]).reshape(-1, 1)#.cpu().detach().numpy()
+    y1_predictions = predictions['y1'].sample([1, 1]).reshape(-1, 1)#.cpu().detach().numpy()
     epsilon = predictions['epsilon']
     y_pred = y0_predictions * (1 - t_obs) + y1_predictions * t_obs
     criterion = TargetedLoss()

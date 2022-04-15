@@ -80,6 +80,7 @@ class causal_batle_head(nn.Module):
 
         #epsilon
         self.epsilon_weight = nn.Parameter(torch.rand([1]), requires_grad=True)
+        self.t_weight = nn.Parameter(torch.rand([1]), requires_grad=True)
 
     def forward(self, inputs):
         # Inputs = backbone output
@@ -105,13 +106,15 @@ class causal_batle_head(nn.Module):
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         epsilon = self.epsilon_weight * torch.ones(inputs.shape[0]).to(device)
+        t_weight = self.t_weight * torch.ones(inputs.shape[0]).to(device)
 
         predictions = {'y0': y0_predictions,
                        'y1': y1_predictions,
                        't': t_predictions,
                        'd': d_predictions,
                        'xr': x_reconstruction,
-                       'epsilon': epsilon}
+                       'epsilon': epsilon,
+                       't_weight':t_weight}
 
         return predictions
 
@@ -159,8 +162,6 @@ def fit_causal_batle(epochs,
                      path_logger='',
                      config_name='',
                      home_dir='',
-                     episilon=None,
-                     weight_1=1,
                      use_validation_best=False):
     """
         Fit implementation: Contain epochs and batch iterator, optimization steps, and eval.
@@ -196,6 +197,9 @@ def fit_causal_batle(epochs,
         alpha = torch.ones(len(criterion))
     elif not torch.is_tensor(alpha):
         alpha = torch.tensor(alpha)
+
+    print('len alpha', len(alpha), alpha)
+    print('len cri', len(criterion))
     assert len(alpha) == len(criterion), 'Loss weights do not match number of losses'
 
     loss_train_t, metric_train_t = np.zeros(epochs), np.zeros(epochs)  # _t: propensity score loss
@@ -247,8 +251,7 @@ def fit_causal_batle(epochs,
             lb_t, lb_y, lb_tg, lb_d, lb_r, _ = _calculate_criterion_causalbatle(batch=batch,
                                                                          criterion_function=criterion,
                                                                          predictions=predictions,
-                                                                         device=device,
-                                                                         weight_1=weight_1)
+                                                                         device=device)
             loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_tg + alpha[3]*lb_d + alpha[4] * lb_r
             loss_batch.backward()
             optimizer.step()
@@ -259,8 +262,7 @@ def fit_causal_batle(epochs,
             _, _, _, _, _, lb_a = _calculate_criterion_causalbatle(batch=batch,
                                                                 criterion_function=criterion,
                                                                 predictions=predictions,
-                                                                device=device,
-                                                                weight_1=weight_1)
+                                                                device=device)
             loss_adv = alpha[5] * lb_a
             loss_adv.backward()
             for name, layer in model.named_modules():
@@ -402,8 +404,8 @@ def _calculate_loss_metric_noopti(model, loader, device, criterion, metric_funct
     return output
 
 
-def _calculate_criterion_causalbatle(criterion_function, batch, predictions, device='cpu', weight_1=1):
-    loss_t = criterion_function[0](batch=batch, predictions=predictions, device=device, weight_1=weight_1)
+def _calculate_criterion_causalbatle(criterion_function, batch, predictions, device='cpu'):
+    loss_t = criterion_function[0](batch=batch, predictions=predictions, device=device)
     loss_y = criterion_function[1](batch=batch, predictions=predictions, device=device)
     loss_tg = criterion_function[2](batch=batch, predictions=predictions, device=device)
     loss_d = criterion_function[3](batch=batch, predictions=predictions, device=device)
@@ -420,19 +422,17 @@ def _calculate_metric_causalbatle(metric_functions, batch, predictions):
     return metrics_t, metrics_y, metrics_d, metrics_r
 
 
-def criterion_function_t(batch, predictions, device='cpu', weight_1=None):
+def criterion_function_t(batch, predictions, device='cpu'):
     t_predictions = predictions['t']
-    d_obs = batch[3].to(device)
+    weights = predictions['t_weight']
 
+    d_obs = batch[3].to(device)
     t_obs = batch[2].to(device)  # [d_obs == 1]
     # Weights
     loss = -t_predictions.log_prob(t_obs)
     loss = loss[d_obs == 1]
-
-    weights = [weight_1 if item == 0 else 1 for item in t_obs[d_obs == 1]]
-    weights = torch.Tensor(weights)
-    weights.requires_grad = False
-    loss = torch.mul(loss, weights.to(device))
+    weights = weights.reshape(-1,1)[d_obs == 1]
+    loss = torch.mul(loss, weights)
     return loss.mean()
 
 
@@ -452,7 +452,7 @@ def criterion_function_y(batch, predictions, device='cpu'):
     else:
         return loss_y0_babch + loss_y1_babch
 
-#NEW
+
 def criterion_function_dragonnet_targeted(batch, predictions, device='cpu'):
     mask = np.equal(batch[3], 1).to(torch.bool).to(device)
 

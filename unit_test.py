@@ -28,7 +28,7 @@ class DataPrep(unittest.TestCase):
                                  repetitions=1,
                                  )
 
-        metrics, loss, ate, tau = run_model(params)
+        metrics, loss, ate, tau, _ = run_model(params)
         self.assertFalse(math.isnan(ate['ate_naive_train']), "GWAS+Dragonnet failed (1 repetitions)")
 
     def test_idhp_aipw(self):
@@ -36,7 +36,7 @@ class DataPrep(unittest.TestCase):
         params = parameter_debug(data_name='ihdp', model_name='aipw', use_validation=True,
                                  use_tensorboard=True, max_epochs=2, ate_method_list=['aipw'],
                                  config_name='unit_test')
-        metrics, loss, ate, tau = run_model(params)
+        metrics, loss, ate, tau, _ = run_model(params)
         self.assertFalse(math.isnan(ate['ate_aipw_train']), 'IHDP+AIPW failed (default repetitions)')
 
     def test_ihdp_bdragonnet(self):
@@ -54,10 +54,10 @@ class DataPrep(unittest.TestCase):
         params = parameter_debug(
             data_name='gwas', model_name='batle', max_epochs=2, batch_size=200,
             use_validation=True, ate_method_list=['naive', 'aipw'],
-            config_name='unit_test', lr=0.001, weight_decay=0.05, alpha=[1, 1, 1, 1, 1],
+            config_name='unit_test', lr=0.001, weight_decay=0.05, alpha=[1, 1, 1, 1, 1, 1],
             use_source=True, repetitions=5, forward_passes=10
         )
-        metrics, loss, ate, tau = run_model(params)
+        metrics, loss, ate, tau, _ = run_model(params)
         self.assertFalse(math.isnan(ate['ate_aipw_train']), 'GWAS anc Causal-Batle failed.')
 
     def test_ihdp_cevae(self):

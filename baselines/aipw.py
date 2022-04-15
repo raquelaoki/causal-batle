@@ -127,8 +127,6 @@ def fit_aipw(epochs,
              config_name='',
              home_dir='',
              alpha=[2,1,1],
-             episilon=None,
-             weight_1=1,
              use_validation_best=False,
              ):
     logger.debug('...starting')

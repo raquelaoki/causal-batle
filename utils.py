@@ -24,7 +24,7 @@ def make_data(params):
         return hd.make_ihdp(params)
 
 
-def run_model(params, model_seed=0):
+def run_model(params, model_seed=0, good_runs=0):
     """ Given a set of parameters, it run the model.
     1. Creates the dataset (use seed for stability/reproducibility across several models).
     2. Make data loaders.
@@ -51,12 +51,14 @@ def run_model(params, model_seed=0):
                                                   contfeat=data.contfeat
                                                   )
             success = True
+            good_runs += 1
         except ValueError:
             model_seed = model_seed + 1
             params['seed_add_on'] = params['seed_add_on']+1
-            print('...value error')
+            print('...value error (good runs before - ',good_runs,')' )
+            good_runs=0
 
-    return metrics, loss, ate, tau
+    return metrics, loss, ate, tau, good_runs
 
 
 def organize(params, ate, tau, table=pd.DataFrame(), b=1):
@@ -128,21 +130,22 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
         print('seed ', seed)
         logger.debug('seed '+str(seed))
         config_name = params['config_name']
+        good_runs = 0
         for i in range(b):
             if use_range_source_p:
-                table = range_source_p(params, table, source_size_p, b=i)
+                table, good_runs = range_source_p(params, table, source_size_p, b=i, good_runs=good_runs)
             else:
                 params['config_name_seeds'] = config_name + '_' + 'seed' + str(
                     params['seed']) + '_' + 'b' + str(i)
                 print(params['config_name_seeds'])
-                metrics, loss, ate, tau = run_model(params, model_seed=i)
+                metrics, loss, ate, tau, good_runs = run_model(params, model_seed=i, good_runs=good_runs)
                 table = organize(params, ate, tau, table, b=i)
         if save:
             table.to_csv(output_save + '.csv', sep=',')
     return table
 
 
-def range_source_p(params, table, source_size_p=None, b=1):
+def range_source_p(params, table, source_size_p=None, b=1, good_runs=0):
     """ Creates a range of experiments with same set of parameters, but different source_size_p.
     source_size_p: proportion of input data splited between target and source domain.
     Note 1: that this only makes sense on the GWAS and IHDP datasets, where we are artificially spliting the dataset
@@ -163,8 +166,8 @@ def range_source_p(params, table, source_size_p=None, b=1):
         params['config_name'] = condig_name + '_' + str(p) + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(b)
         params['source_size_p'] = p
         params['config_name_seeds'] = params['config_name']
-        metrics, loss, ate, tau = run_model(params, model_seed=b)
+        metrics, loss, ate, tau, good_runs = run_model(params, model_seed=b, good_runs=good_runs)
         table = organize(params, ate, tau, table, b=b)
 
     params['config_name'] = condig_name
-    return table
+    return table, good_runs

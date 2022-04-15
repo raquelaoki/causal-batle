@@ -150,6 +150,8 @@ def fit_wrapper(params,
                                  )
     alpha = params['alpha']
 
+    params['config_name_seeds'] = params.get('config_name_seeds',params['config_name']+str(params['seed']))
+
     model, loss, metrics = fit(epochs=params['max_epochs'],
                                model=model,
                                loader_train=loader_train,
@@ -165,7 +167,6 @@ def fit_wrapper(params,
                                path_logger=path_logger,
                                config_name=params['config_name_seeds'],
                                home_dir=params['home_dir'],
-                               weight_1=params['weight_1'] , # Only used by causal batle
                                use_validation_best=params['use_validation_best']
                                )
 
