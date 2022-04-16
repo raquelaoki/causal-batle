@@ -302,6 +302,7 @@ def fit_cevae(epochs,
             metric_val_t[e], metric_val_y[e] = _calculate_metric_cevae(metric_functions=metric_functions,
                                                                        batch=batch,
                                                                        predictions=predictions)
+
         else:
             loss_val_t[e], loss_val_y[e], loss_val_all[e] = None, None, None
             metric_val_t[e], metric_val_y[e] = None, None

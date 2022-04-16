@@ -264,8 +264,11 @@ def fit_causal_batle(epochs,
             loss_adv = alpha[5] * lb_a
             loss_adv.backward()
             for name, layer in model.named_modules():
-                if name in second_update:
-                    layer.weight.grad.data.zero_()
+                try:
+                    if name in second_update:
+                        layer.weight.grad.data.zero_()
+                except:
+                    print(name)
             optimizer.step()
 
             _loss_t.append(lb_t.cpu().detach().numpy())

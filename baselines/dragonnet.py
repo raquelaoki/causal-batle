@@ -297,6 +297,11 @@ def fit_dragonnet(epochs,
     # Targeted losses.
     loss_train_ty, loss_val_ty = np.zeros(epochs), np.zeros(epochs)
 
+    if use_validation_best:
+        best_loss = 999
+        best_epoch = -1
+        best_model = None
+
     for e in range(epochs):
         # set model to train mode
         model.train()
@@ -347,6 +352,14 @@ def fit_dragonnet(epochs,
             metric_val_t[e], metric_val_y[e] = _calculate_metric_dragonnet(metric_functions=metric_functions,
                                                                            batch=batch,
                                                                            predictions=predictions)
+
+            if use_validation_best:
+                current_loss = loss_val_t[e] + loss_val_y[e] + loss_val_ty[e]
+                if current_loss < best_loss:
+                    best_epoch = e
+                    best_loss = current_loss
+                    best_model = model.state_dict()
+
         else:
             loss_val_t[e], loss_val_y[e], loss_val_ty[e] = None, None, None
             metric_val_t[e], metric_val_y[e] = None, None
@@ -360,6 +373,9 @@ def fit_dragonnet(epochs,
                       'metric_val_t': metric_val_t[e], 'metric_val_y': metric_val_y[e]}
             writer_tensorboard = ht.update_tensorboar(writer_tensorboard, values, e)
 
+    if use_validation_best:
+        if best_epoch > 0:
+            model.load_state_dict(best_model)
     # Change model to eval mode
     model.eval()
 
