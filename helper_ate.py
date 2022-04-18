@@ -35,7 +35,6 @@ def calculate_ate(loader_train, loader_test, loader_all, model,
     ate_estimated.update(ate_all)
     ate_estimated.update(ate_train)
     ate_estimated.update(ate_test)
-
     return ate_estimated
 
 
@@ -262,7 +261,7 @@ def _aipw_ate(t_obs, y_obs, y0_pred, y1_pred, t_pred):
     return np.mean(ite)
 
 
-def _truncate_by_g(attribute, g, level=0.05):
+def _truncate_by_g(attribute, g, level=0.005):
     """
     Remove rows with too low or too high g values. attribute and g must have same dimensions.
     :param attribute: column we want to keep after filted
@@ -275,7 +274,7 @@ def _truncate_by_g(attribute, g, level=0.05):
     return attribute[keep_these]
 
 
-def _truncate_all_by_g(y0_pred, y1_pred, t_pred, t_obs, y_obs, truncate_level=0.05):
+def _truncate_all_by_g(y0_pred, y1_pred, t_pred, t_obs, y_obs, truncate_level=0.005):
     orig_t_pred = np.copy(t_pred)
     y0_pred = _truncate_by_g(np.copy(y0_pred), orig_t_pred, truncate_level)
     y1_pred = _truncate_by_g(np.copy(y1_pred), orig_t_pred, truncate_level)
