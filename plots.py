@@ -11,6 +11,17 @@ import warnings
 warnings.filterwarnings("ignore")
 sns.set_style("whitegrid")
 
+def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/'):
+    files = os.listdir(path)
+    files = [os.path.join(path,f ) for f in files]
+    table = pd.DataFrame()
+    for f in files:
+        _table = pd.read_csv(f, index_col=[0])
+        table = pd.concat([table,_table])
+    table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
+    print(table_stats.groupby(['model_name', 'source_size_p']).mean())
+    return table
+
 
 def read_table(filename,
                path='/content/drive/MyDrive/Colab Notebooks/outputs/',
