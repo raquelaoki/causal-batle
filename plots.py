@@ -4,23 +4,40 @@ import pandas as pd
 import sys
 import os
 import numpy
-numpy.set_printoptions(threshold=sys.maxsize)
-numpy.set_printoptions(threshold=sys.maxsize)
 import matplotlib.pyplot as plt
 import warnings
+
+numpy.set_printoptions(threshold=sys.maxsize)
+numpy.set_printoptions(threshold=sys.maxsize)
 warnings.filterwarnings("ignore")
 sns.set_style("whitegrid")
 
 
 def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/'):
     files = os.listdir(path)
-    files = [os.path.join(path,f ) for f in files]
+    files = [os.path.join(path, f) for f in files]
     table = pd.DataFrame()
     for f in files:
         _table = pd.read_csv(f, index_col=[0])
-        table = pd.concat([table,_table])
+        table = pd.concat([table, _table])
     table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
     print(table_stats.groupby(['model_name', 'source_size_p']).mean())
+    new_names = {'batle': 'C-Batle',
+                 'dragonnet': 'Drag.',
+                 'bdragonnet': 'B-Drag.',
+                 'cevae': 'Cevae',
+                 'aipw': 'AIPW'}
+
+    table['model_name'] = [new_names[item] for item in table['model_name']]
+    table['source_size_p'] = table['source_size_p'] * 100
+    table['source_size_p'] = [str(round(item)) + '%' for item in table['source_size_p']]
+    ratios = {
+        '20%': str(0.25),
+        '40%': str(0.67),
+        '60%': str(1.5),
+        '80%': str(4)
+    }
+    table['source_size_p'] = [ratios[item] for item in table['source_size_p']]
     return table
 
 
@@ -45,20 +62,21 @@ def read_table(filename,
 
 
 def set_colors(methods_order,
-               our_method='batle',
+               our_method='C-Batle',
                two_colors=['#FF8C00', '#1e90ff']):
     # two_colors: first posision are baselines, second are our proposed method
     return [two_colors[1] if method == our_method else two_colors[0] for method in methods_order]
 
 
 def single_barplot(table, metric_name, metric_name_ylabel, title,
-                   save_plot=False, fontsize=15, font_scale=1.3):
+                   save_plot=False, fontsize=15, font_scale=1.3,
+                   order=['AIPW', 'Cevae', 'B-Drag.', 'Drag.', 'C-Batle']):
     sns.set(font_scale=font_scale)
     methods_order = pd.unique(table['model_name'].values)
     colors_order = set_colors(methods_order=methods_order)
     ax = sns.barplot(x='model_name', y=metric_name,
                      palette=sns.color_palette(colors_order),
-                     dodge=False, data=table)  # hue='model_name'order=order,
+                     dodge=False, data=table, order=order)  # hue='model_name'order=order,
     ax.set_xlabel("Method", fontsize=fontsize)
     ax.set_ylabel(metric_name_ylabel, fontsize=fontsize)
     ax.set_title(title, fontsize=fontsize)
@@ -79,7 +97,8 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
     colors_order = set_colors(methods_order=methods_order)
     ax = sns.barplot(x=group_name_x, y=metric_name_y,
                      palette=sns.color_palette(colors_order),
-                     saturation=0.8, data=table, hue='model_name')
+                     saturation=0.8, data=table,
+                     hue='model_name')
     ax.set_xlabel(group_name_xlabel, fontsize=fontsize)
     ax.set_ylabel(metric_name_ylabel, fontsize=fontsize)
     ax.axis(ymin=0, ymax=axis_max)  # 2.1
