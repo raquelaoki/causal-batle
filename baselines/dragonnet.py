@@ -94,7 +94,8 @@ class dragonnet_head(nn.Module):
         self.head_layer2_2_1 = nn.Linear(in_features=self.units2, out_features=self.units2)
 
         # Activation functions.
-        self.elu = nn.ELU(alpha=0.25)
+        #self.elu = nn.ELU(alpha=0.25)
+        self.elu = nn.LeakyReLU(0.2)
         self.tahn = nn.Tanh()
 
         if self.use_dropout:

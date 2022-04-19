@@ -11,6 +11,7 @@ import warnings
 warnings.filterwarnings("ignore")
 sns.set_style("whitegrid")
 
+
 def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/'):
     files = os.listdir(path)
     files = [os.path.join(path,f ) for f in files]
@@ -70,9 +71,10 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
               group_name_x, group_name_xlabel,
               save_plot=False, fontsize=15, font_scale=1.3,
               figsize=(11.7, 8.27), axis_max=0.3,
-              _h = ['o', '\\', '+', '']):
+              _h=['o', '\\', '+', '']):
     sns.set(rc={'figure.figsize': figsize})
     sns.set(font_scale=font_scale)
+    methods_rep = pd.unique(table['source_size_p'].values)
     methods_order = pd.unique(table['model_name'].values)
     colors_order = set_colors(methods_order=methods_order)
     ax = sns.barplot(x=group_name_x, y=metric_name_y,
@@ -82,7 +84,7 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
     ax.set_ylabel(metric_name_ylabel, fontsize=fontsize)
     ax.axis(ymin=0, ymax=axis_max)  # 2.1
     # Define some hatches
-    hatches = [np.repeat(h, len(methods_order)) for h in _h]
+    hatches = [np.repeat(h, len(methods_rep)) for h in _h]
     hatches = [item for sublist in hatches for item in sublist]
     # Loop over the bars
     for i, thisbar in enumerate(ax.patches):

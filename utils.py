@@ -132,6 +132,7 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
         config_name = params['config_name']
         good_runs = 0
         for i in range(b):
+            print('b ', i)
             if use_range_source_p:
                 table, good_runs = range_source_p(params, table, source_size_p, b=i, good_runs=good_runs)
             else:
