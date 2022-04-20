@@ -20,8 +20,6 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/')
     for f in files:
         _table = pd.read_csv(f, index_col=[0])
         table = pd.concat([table, _table])
-    table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
-    print(table_stats.groupby(['model_name', 'source_size_p']).mean())
     new_names = {'batle': 'C-Batle',
                  'dragonnet': 'Drag.',
                  'bdragonnet': 'B-Drag.',
@@ -32,12 +30,15 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/')
     table['source_size_p'] = table['source_size_p'] * 100
     table['source_size_p'] = [str(round(item)) + '%' for item in table['source_size_p']]
     ratios = {
-        '20%': str(0.25),
-        '40%': str(0.67),
-        '60%': str(1.5),
-        '80%': str(4)
+        '20%': '('+str(0.25)+')',
+        '40%': '('+str(0.67)+')',
+        '60%': '('+str(1.5)+')',
+        '80%': '('+str(4)+')'
     }
-    table['source_size_p'] = [ratios[item] for item in table['source_size_p']]
+    table['source_size_p'] = [item+ratios[item] for item in table['source_size_p']]
+    table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
+    print(table_stats.groupby(['model_name', 'source_size_p']).mean())
+
     return table
 
 
@@ -101,7 +102,9 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
                      hue='model_name')
     ax.set_xlabel(group_name_xlabel, fontsize=fontsize)
     ax.set_ylabel(metric_name_ylabel, fontsize=fontsize)
+    ax.set_yscale("log")
     ax.axis(ymin=0, ymax=axis_max)  # 2.1
+
     # Define some hatches
     hatches = [np.repeat(h, len(methods_rep)) for h in _h]
     hatches = [item for sublist in hatches for item in sublist]
@@ -109,7 +112,7 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
     for i, thisbar in enumerate(ax.patches):
         # Set a different hatch for each bar
         thisbar.set_hatch(hatches[i])
-    ax.legend(ncol=2, loc='upper right', fontsize=fontsize)
+    ax.legend(ncol=3, loc='upper right', fontsize=fontsize)
     ax.xaxis.get_label().set_fontsize(fontsize)
     if save_plot:
         plt.savefig(title + '.png', dpi=300, bbox_inches='tight')
