@@ -73,8 +73,8 @@ def single_barplot(table, metric_name, metric_name_ylabel, title,
                    save_plot=False, fontsize=15, font_scale=1.3,
                    order=['AIPW', 'Cevae', 'B-Drag.', 'Drag.', 'C-Batle']):
     sns.set(font_scale=font_scale)
-    methods_order = pd.unique(table['model_name'].values)
-    colors_order = set_colors(methods_order=methods_order)
+   # methods_order = pd.unique(table['model_name'].values)
+    colors_order = set_colors(methods_order=order)
     ax = sns.barplot(x='model_name', y=metric_name,
                      palette=sns.color_palette(colors_order),
                      dodge=False, data=table, order=order)  # hue='model_name'order=order,
@@ -90,7 +90,7 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
               group_name_x, group_name_xlabel,
               save_plot=False, fontsize=15, font_scale=1.3,
               figsize=(11.7, 8.27), axis_max=0.3,
-              _h=['o', '\\', '+', '']):
+              _h=['o', '\\', '+', ''], log_scale=False):
     sns.set(rc={'figure.figsize': figsize})
     sns.set(font_scale=font_scale)
     methods_rep = pd.unique(table['source_size_p'].values)
@@ -102,7 +102,8 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
                      hue='model_name')
     ax.set_xlabel(group_name_xlabel, fontsize=fontsize)
     ax.set_ylabel(metric_name_ylabel, fontsize=fontsize)
-    ax.set_yscale("log")
+    if log_scale:
+        ax.set_yscale("log")
     ax.axis(ymin=0, ymax=axis_max)  # 2.1
 
     # Define some hatches
