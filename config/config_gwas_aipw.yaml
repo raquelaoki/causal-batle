@@ -5,12 +5,11 @@ parameters:
     ate_method_list: ['naive','aipw']
     n_covariates: 10000
     n_sample: 2000
-    repetitions: 10
-    seed: 10
+    repetitions: 25
+    seed: 4
     max_epochs: 100
     batch_size: 200
     lr: 0.01
     weight_decay: 0.05
-    use_validation: True
-    use_validation_best: True
+    use_validation: False
     use_tensorboard: False

@@ -1,23 +1,23 @@
 parameters:
     data_name: 'gwas'
-    model_name: 'batle'
-    config_name: 'gwas_batle'
-    ate_method_list: [ 'naive','aipw' ]
+    model_name: 'bdragonnet'
+    config_name: 'gwas_bdragonnet'
+    ate_method_list: ['naive','aipw']
     n_covariates: 10000
     n_sample: 2000
-    repetitions: 10
-    seed: 10
+    repetitions: 25
+    seed: 4
     max_epochs: 100
-    batch_size: 400
+    batch_size: 200
     units1: 200
     units2: 100
     lr: 0.0001
     weight_decay: 0.05
     dropout_p: 0.25
-    alpha: [4, 4,0.01, 1,4,1]
+    alpha: [1,1,1]
     use_validation: True
     use_validation_best: True
     use_dropout: True
     use_tensorboard: False
-    use_source: True
+    type_original: False
     forward_passes: 30
