@@ -13,11 +13,12 @@ class Normal(nn.Module):
         super(Normal, self).__init__()
         self.mu = nn.Linear(in_features=in_features, out_features=out_features, bias=True, )
         self.sigma = nn.Linear(in_features=in_features, out_features=out_features, bias=True)
+        #self.threshold = nn.Threshold(0.000001, 0.000001)
         self.softplus = nn.Softplus()
 
     def forward(self, inputs):
         return distributions.Normal(loc=self.mu(inputs),
-                                    scale=self.softplus(self.sigma(inputs) + 1e-7))
+                                    scale=self.softplus(self.sigma(inputs))+0.0000001)
 
 
 class Categorical(nn.Module):
