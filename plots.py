@@ -72,7 +72,7 @@ def set_colors(methods_order,
 def single_barplot(table, metric_name, metric_name_ylabel, title,
                    save_plot=False, fontsize=15, font_scale=1.3,
                    methods_order=None, log_scale=False,
-                    data_name=''
+                   data_name=''
                    ):
     sns.set(font_scale=font_scale)
     if not methods_order:
@@ -88,7 +88,7 @@ def single_barplot(table, metric_name, metric_name_ylabel, title,
     ax.set_ylabel(metric_name_ylabel, fontsize=fontsize)
     ax.set_title(title, fontsize=fontsize)
     if save_plot:
-        plt.savefig(data_name+'_single_plot.png', dpi=300, bbox_inches='tight')
+        plt.savefig(data_name + '_single_plot.png', dpi=300, bbox_inches='tight')
     return ax
 
 
@@ -126,12 +126,12 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
     ax.legend(ncol=ncol_legend, loc='upper right', fontsize=fontsize)
     ax.xaxis.get_label().set_fontsize(fontsize)
     if save_plot:
-        plt.savefig(data_name+'_'+title + '.png', dpi=300, bbox_inches='tight')
+        plt.savefig(data_name + '_' + title + '.png', dpi=300, bbox_inches='tight')
     return ax
 
 
 def plot_around_treat(table, seed, metric_name, labely_name, methods_order,
-                      save_plot=False, fontsize=15, font_scale=1.3, figsize=(8,5),
+                      save_plot=False, fontsize=15, font_scale=1.3, figsize=(8, 5),
                       title='swarm', data_name=''):
     sns.set(rc={'figure.figsize': figsize})
     sns.set(font_scale=font_scale)
@@ -146,10 +146,10 @@ def plot_around_treat(table, seed, metric_name, labely_name, methods_order,
                        size=8
                        )
     ax.set_xticklabels(ax.get_xticklabels())  # rotation=90
-    ax.axhline(y=taus[seed], color='r', linestyle='-')
-    tau = round(taus[seed],2)
-    ax.set_ylabel(labely_name + '(τ='+str(tau)+')', fontsize=fontsize)
+    ax.axhline(y=taus[seed], color='black', linestyle='-', linewidth=3)
+    tau = round(taus[seed], 2)
+    ax.set_ylabel(labely_name + '(τ=' + str(tau) + ')', fontsize=fontsize)
     ax.set_xlabel('Dataset Replication ' + str(seed), fontsize=fontsize)
     if save_plot:
-        plt.savefig(data_name+'_'+title+str(seed) + '.png', dpi=300, bbox_inches='tight')
+        plt.savefig(data_name + '_' + title + str(seed) + '.png', dpi=300, bbox_inches='tight')
     return ax

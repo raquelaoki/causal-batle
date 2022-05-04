@@ -61,7 +61,7 @@ def _check_params_consistency(params):
     :return: dictionary with parameters after consistency tests.
     """
     valid_model_names = ['dragonnet', 'aipw', 'bdragonnet', 'batle', 'cevae']
-    valid_data_names = ['ihdp', 'gwas']
+    valid_data_names = ['ihdp', 'gwas', 'hcminist']
 
     assert 'data_name' in params, 'data_name missing!'
     assert 'model_name' in params, 'model_name missing!'
@@ -102,10 +102,17 @@ def _check_params_consistency(params):
         params['n_treatments'] = params.get('n_treatments', 1)
         params['use_overlap_knob'] = params.get('use_overlap_knob', False)
         params['overlap_knob'] = params.get('overlap_knob', 1)
+        params['is_Image'] = False
     elif params['data_name'] == 'ihdp':
         assert 0 <= params['seed'] <= 9, 'Seed out of range (0,9)'
         params['n_covariates'] = params.get('n_covariates', 25)
         params['n_sample'] = params.get('n_sample', 747)
+        params['is_Image'] = False
+    elif params['data_name'] == 'hcminist':
+        params['source_dig'] = params.get('source_dig', 3)
+        params['source_size_p'] = 1
+        params['is_Image'] = True
+        params['use_data_x_source']=False
     else:
         logger.debug('%s not implemented', params['data_name'])
 
@@ -137,9 +144,13 @@ def _check_params_consistency(params):
         params['use_source'] = True
         params['type_original'] = False
         params['filter_d'] = True
+        if params['data_name']=='hcminist':
+            params['use_data_x_source']=True
+        else:
+            params['use_data_x_source'] = False
         assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
-    #elif params['model_name'] == 'cevae':
-    #    params['ate_method_list'] = ['naive']
+    elif params['model_name'] == 'cevae':
+        params['use_source'] = False
     else:
         logger.debug('%s not implemented', params['model_name'])
 

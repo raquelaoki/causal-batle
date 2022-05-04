@@ -1,15 +1,18 @@
 import logging
 import numpy as np
+import torch
 
 from scipy.special import expit
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torchvision import datasets
 
 # Local Imports
 import CompBioAndSimulated_Datasets.simulated_data_binarycause as bcdata  # local library / github repo
 import helper_parameters as hp
+import quince.library.datasets.utils as quince
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +126,8 @@ class DataTarget:
 
 
 def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_size=0.2, test_size=0.33,
-                   use_validation=False, use_source=False, binfeat=[], contfeat=[], seed_add_on=0):
+                   use_validation=False, use_source=False, binfeat=[], contfeat=[], seed_add_on=0,
+                   use_data_x_source=False):
     """ It creates the data classes (DataTarget or DataTargetAndSource) from input data data_x, data_t, data_y.
     VALID ONLY FOR GWAS AND IHDP.
     It will alwyas split the dataset using source_size, even it the method only uses the target data
@@ -133,6 +137,7 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
     :param data_x: np.matrix
     :param data_t: np.array
     :param data_y: np.array
+    :param use_data_x_source: bool
     :param data_x_source: np.matrix (optional)
     :param seed: integer
     :param source_size: proportion, in[0,1]
@@ -145,11 +150,11 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
     """
     if use_source:
         logger.debug('... combining source and target domains data.')
-        if data_x_source:
+        if use_data_x_source:
             s_x = data_x_source
             t_x, t_y, t_t = data_x, data_y, data_t
         else:
-            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed+3+seed_add_on,
+            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed + 3 + seed_add_on,
                                                         test_size=source_size)
 
         n_source = s_x.shape[0]
@@ -160,7 +165,7 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
         y = np.concatenate([np.zeros(n_source).reshape(-1, 1), t_y.reshape(-1, 1)], axis=0)
         d = np.concatenate([np.zeros(n_source), np.ones(n_target)], axis=0)
 
-        np.random.seed(seed+seed_add_on)
+        np.random.seed(seed + seed_add_on)
         permutation = np.random.permutation(len(y))
         x = x[permutation]
         t = t[permutation]
@@ -172,18 +177,23 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
                                    )
     else:
         logger.debug('... using only target domain data.')
-
-        s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t,
-                                                    random_state=seed+3+seed_add_on,
-                                                    test_size=source_size)
-        t_x = t_x.values
-        np.random.seed(seed + seed_add_on)
-        permutation = np.random.permutation(len(t_y))
-        t_x = t_x[permutation]
-        t_t = t_t[permutation]
-        t_y = t_y[permutation]
-        data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size,
-                          binfeat=binfeat, contfeat=contfeat)
+        if source_size < 1:
+            #  Only a proportion of the data in source is used (GWAS and IHDP)
+            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t,
+                                                        random_state=seed + 3 + seed_add_on,
+                                                        test_size=source_size)
+            t_x = t_x.values
+            np.random.seed(seed + seed_add_on)
+            permutation = np.random.permutation(len(t_y))
+            t_x = t_x[permutation]
+            t_t = t_t[permutation]
+            t_y = t_y[permutation]
+            data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size,
+                              binfeat=binfeat, contfeat=contfeat)
+        else:
+            #  All the data in source is used (HCMNIST)
+            data = DataTarget(x=data_x, t=data_t, y=data_y, use_validation=use_validation, test_size=test_size,
+                              binfeat=binfeat, contfeat=contfeat)
     return data
 
 
@@ -262,3 +272,119 @@ def make_ihdp(params):
                           )
 
     return data, tau
+
+
+def make_hcminist(params):
+    seed = params['seed']
+    data_setting = HCMNIST('', download=True, seed=seed, source_dig=params['source_dig'])
+    data = make_DataClass(data_x=data_setting.x_t,
+                          data_y=data_setting.y_t,
+                          data_t=data_setting.t_t,
+                          data_x_source=data_setting.x_s,
+                          seed=seed,
+                          source_size=1,  # Use all x_t available
+                          use_validation=params['use_validation'],
+                          use_source=params['use_source'],
+                          binfeat=[],
+                          contfeat=list(range(data_setting.x_t.shape[1])),
+                          seed_add_on=params['seed_add_on'],
+                          use_data_x_source=params['use_data_x_source']
+                          )
+    tau = data_setting.tau.mean()
+    return data, tau
+
+
+class HCMNIST(datasets.MNIST):
+    def __init__(
+            self,
+            root=None,
+            download=False,
+            source_dig=9,
+            seed=0
+    ):
+        # https://pytorch.org/vision/stable/datasets.html
+        self.__class__.__name__ = "MNIST"
+        super(HCMNIST, self).__init__(root, train=True, download=download)
+        self.seed = seed
+        self.data = (self.data.float().div(255) - 0.1307).div(0.3081)
+        self.x_t = self.data[self.targets < 2]
+        self.target_t = self.targets[self.targets < 2]
+
+        self.x_s = self.data[self.targets >= 2]
+        self.target_s = self.targets[self.targets >= 2]
+
+        if source_dig < 9:
+            assert source_dig >= 2, 'Wrong source_dig! Values should be between 0 and 9, received ' + str(source_dig)
+            self.x_s = self.x_s[self.target_s < source_dig]
+            self.target_s = self.target_s[self.target_s < source_dig]
+
+        #  Simulates t and y
+        self.create_hcmnist()
+
+    def _fit_phi_model(self, domain=2):
+
+        # Reference: quince/library/datasets/utils.py
+        edges = torch.arange(-domain, domain + 0.1, (2 * domain) / 10)
+        # data = (data.float().div(255) - 0.1307).div(0.3081).view(data.shape[0], -1)
+        data = self.x_t.view(self.x_t.shape[0], -1)
+        model = {}
+        digits = torch.unique(self.target_t)
+        for i, digit in enumerate(digits):
+            lo, hi = edges[i: i + 2]
+            ind = self.target_t == digit
+            data_ind = data[ind].view(ind.sum(), -1)
+            means = data_ind.mean(dim=-1)
+            mu = means.mean()
+            sigma = means.std()
+            model.update(
+                {
+                    digit.item(): {
+                        "mu": mu.item(),
+                        "sigma": sigma.item(),
+                        "lo": lo.item(),
+                        "hi": hi.item(),
+                    }
+                }
+            )
+        return model
+
+    def _phi(self, domain=2):
+        # Reference: quince/library/datasets/utils.py
+        # x = ((data.astype("float32") / 255.0) - 0.1307) / 0.3081
+        z = np.zeros_like(self.target_t.numpy().astype("float32"))
+        phi_model = self._fit_phi_model(domain=domain)
+
+        for k, v in phi_model.items():
+            ind = self.target_t == k
+            x_ind = self.x_t[ind].reshape(ind.sum(), -1)
+            means = x_ind.mean(axis=-1)
+            z[ind] = quince.linear_normalization(
+                np.clip((means - v["mu"]) / v["sigma"], -1.4, 1.4), v["lo"], v["hi"]
+            )
+        return np.expand_dims(z, -1)
+
+    def create_hcmnist(self, sigma_y=1, theta=4):
+        # adapted
+        # https://github.com/anndvision/quince/blob/main/quince/library/datasets/hcmnist.py
+
+        # Creates phi=[-2,2]
+        phi = self._phi()
+        #  Propensity Score.
+        rng = np.random.RandomState(seed=self.seed)
+        e_propscore = expit(phi.ravel() * 0.75 + 0.5)
+
+        #  Treat Assig.
+        self.t_t = rng.binomial(1, e_propscore).astype("float32")
+        u = rng.binomial(1, 0.5, size=len(e_propscore)).astype("float32").ravel()
+
+        #  Random Noise.
+        eps = (sigma_y * rng.normal(size=self.t_t.shape)).astype("float32")
+
+        #  Outcomes.
+        # print(phi.shape, u.shape)
+        mu0 = (quince.f_mu(x=phi.ravel(), t=0.0, u=u, theta=theta).astype("float32").ravel())
+        mu1 = (quince.f_mu(x=phi.ravel(), t=1.0, u=u, theta=theta).astype("float32").ravel())
+        y0 = mu0 + eps
+        y1 = mu1 + eps
+        self.y_t = self.t_t * y1 + (1 - self.t_t) * y0
+        self.tau = mu1 - mu0

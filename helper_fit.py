@@ -31,7 +31,9 @@ def make_model(params, binfeat=[], contfeat=[]):
                                     units1=params['units1'],
                                     units2=params['units2'],
                                     units3=params['units3'],
-                                    type_original=params['type_original'])
+                                    type_original=params['type_original'],
+                                    is_Image=params['is_Image'],
+                                    )
         criterion = [dragonnet.criterion_function_dragonnet_t,
                      dragonnet.criterion_function_dragonnet_y,
                      dragonnet.criterion_function_dragonnet_targeted]
@@ -46,7 +48,8 @@ def make_model(params, binfeat=[], contfeat=[]):
                                     units3=params['units3'],
                                     type_original=params['type_original'],
                                     use_dropout=params['use_dropout'],
-                                    dropout_p=params['dropout_p']
+                                    dropout_p=params['dropout_p'],
+                                    is_Image=params['is_Image']
                                     )
         criterion = [bl.criterion_function_dragonnet_t,
                      bl.criterion_function_dragonnet_y,
@@ -70,7 +73,9 @@ def make_model(params, binfeat=[], contfeat=[]):
                                 units1=params['units1'],
                                 units2=params['units2'],
                                 units3=params['units3'],
-                                dropout_p=params['dropout_p'])
+                                dropout_p=params['dropout_p'],
+                                is_Image=params['is_Image']
+                                )
         criterion = [cb.criterion_function_t,
                      cb.criterion_function_y,
                      cb.criterion_function_dragonnet_targeted,

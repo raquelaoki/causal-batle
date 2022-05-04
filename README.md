@@ -187,11 +187,6 @@ Tensorboard
 ```
 
 ## TODO:
-2) Add dr-cfr;
-3) Add X-learner;
-4) Add new dataset (vision);
-5) Add BCCH dataset;
-   * make a zip file easy to drop on colab 
-   * edit CompBioAndSimulated_Datasets to load/simulate Y
-   * allow several magnitues of tau ('knob')
+1) add test for new dataset
+
 

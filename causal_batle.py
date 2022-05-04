@@ -26,17 +26,18 @@ class causal_batle(nn.Module):
     Return: nn.Module model.
     """
 
-    def __init__(self, n_covariates, dropout_p=0.5, units1=200, units2=100, units3=1):
+    def __init__(self, n_covariates, dropout_p=0.5, units1=200, units2=100, units3=1, is_Image=False):
         super().__init__()
-
         self.backbone = dragonnet.dragonnet(n_covariates=n_covariates, type_original=False,
                                             units1=units1, units2=units2, units3=units3,
-                                            use_dropout=True, dropout_p=dropout_p)
+                                            use_dropout=True, dropout_p=dropout_p,
+                                            is_Image=is_Image)
 
         # Update the head for our causal-batle proposed methodlogy
         self.backbone.dragonnet_head = causal_batle_head(units1=units1, units2=units2,
                                                          units3=units3, dropout_p=dropout_p,
-                                                         n_covariates=n_covariates)
+                                                         n_covariates=n_covariates,
+                                                         is_Image=is_Image)
 
     def forward(self, inputs):
         return self.backbone(inputs)
@@ -47,7 +48,8 @@ class causal_batle_head(nn.Module):
     Used inside causal_batle, it attaches to the backbone architecture.
     """
 
-    def __init__(self, n_covariates, units1=200, units2=100, units3=1, dropout_p=0.5):
+    def __init__(self, n_covariates, units1=200, units2=100, units3=1,
+                 dropout_p=0.5, is_Image=False):
         super(causal_batle_head, self).__init__()
         self.units1 = units1
         self.units2 = units2
@@ -76,15 +78,16 @@ class causal_batle_head(nn.Module):
         self.d_predictions = nn.Linear(in_features=self.units2, out_features=1)
 
         # Reconstruction
-        self.decoder_layer = decoder(n_covariates=self.n_covariates, units1=self.units1)
+        self.decoder_layer = decoder(n_covariates=self.n_covariates,
+                                     units1=self.units1,
+                                     is_Image=is_Image)
 
-        #epsilon
+        # epsilon
         self.epsilon_weight = nn.Parameter(torch.rand([1]), requires_grad=True)
         self.t_weight = nn.Parameter(torch.tensor([2.0]), requires_grad=True)
 
     def forward(self, inputs):
         # Inputs = backbone output
-
         # Treatment specific - first layer.
         y0_hidden = self.elu(self.head_layer2_1_0(inputs))
         y1_hidden = self.elu(self.head_layer2_1_1(inputs))
@@ -114,19 +117,22 @@ class causal_batle_head(nn.Module):
                        'd': d_predictions,
                        'xr': x_reconstruction,
                        'epsilon': epsilon,
-                       't_weight':t_weight}
-
+                       't_weight': t_weight}
         return predictions
 
 
 class decoder(nn.Module):
     """Simple Autoenconder"""
 
-    def __init__(self, n_covariates, units1):
+    def __init__(self, n_covariates, units1, is_Image):
         super(decoder, self).__init__()
+        self.is_Image = is_Image
         self.decoder_layer1_1 = nn.Linear(in_features=units1, out_features=units1)
         self.decoder_layer1_2 = nn.Linear(in_features=units1, out_features=units1)
-        self.decoder_layer1_3 = nn.Linear(in_features=units1, out_features=n_covariates)
+        if self.is_Image:
+            self.decoder_layer1_3 = nn.Linear(in_features=units1, out_features=28 * 28)
+        else:
+            self.decoder_layer1_3 = nn.Linear(in_features=units1, out_features=n_covariates)
         self.elu = nn.ELU()
 
     def forward(self, inputs):
@@ -134,6 +140,8 @@ class decoder(nn.Module):
         reconstruction = self.elu(self.decoder_layer1_1(inputs))
         reconstruction = self.elu(self.decoder_layer1_2(reconstruction))
         reconstruction = self.decoder_layer1_3(reconstruction)
+        if self.is_Image:
+            reconstruction = reconstruction.reshape(-1, 1, 28, 28)
         return reconstruction
 
 
@@ -204,7 +212,7 @@ def fit_causal_batle(epochs,
     loss_train_y, metric_train_y = np.zeros(epochs), np.zeros(epochs)  # _y: outcome loss
     loss_train_d, metric_train_d = np.zeros(epochs), np.zeros(epochs)  # _d: discriminator loss
     loss_train_r, metric_train_r = np.zeros(epochs), np.zeros(epochs)  # _r: reconstruction loss
-    loss_train_a , loss_train_tg= np.zeros(epochs), np.zeros(epochs)  # _a: adversarial loss
+    loss_train_a, loss_train_tg = np.zeros(epochs), np.zeros(epochs)  # _a: adversarial loss
 
     loss_val_t, metric_val_t = np.zeros(epochs), np.zeros(epochs)
     loss_val_y, metric_val_y = np.zeros(epochs), np.zeros(epochs)
@@ -237,7 +245,7 @@ def fit_causal_batle(epochs,
 
         torch.cuda.empty_cache()
         _metrics_t, _metrics_y, _metrics_d, _metrics_r = [], [], [], []
-        _loss_t, _loss_y,_loss_tg, _loss_d, _loss_r, _loss_a = [], [], [], [], [], []
+        _loss_t, _loss_y, _loss_tg, _loss_d, _loss_r, _loss_a = [], [], [], [], [], []
 
         for i, batch in enumerate(loader_train):
             # set model to train mode
@@ -247,20 +255,21 @@ def fit_causal_batle(epochs,
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
             lb_t, lb_y, lb_tg, lb_d, lb_r, _ = _calculate_criterion_causalbatle(batch=batch,
-                                                                         criterion_function=criterion,
-                                                                         predictions=predictions,
-                                                                         device=device)
-            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_tg + alpha[3]*lb_d + alpha[4] * lb_r
+                                                                                criterion_function=criterion,
+                                                                                predictions=predictions,
+                                                                                device=device)
+            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_tg + alpha[3] * lb_d + alpha[4] * lb_r
             loss_batch.backward()
             optimizer.step()
 
             # Calculate adversarial loss.
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
+            #print('second pass')
             _, _, _, _, _, lb_a = _calculate_criterion_causalbatle(batch=batch,
-                                                                criterion_function=criterion,
-                                                                predictions=predictions,
-                                                                device=device)
+                                                                   criterion_function=criterion,
+                                                                   predictions=predictions,
+                                                                   device=device)
             loss_adv = alpha[5] * lb_a
             loss_adv.backward()
             for name, layer in model.named_modules():
@@ -268,7 +277,7 @@ def fit_causal_batle(epochs,
                     if name in second_update:
                         layer.weight.grad.data.zero_()
                 except:
-                    print(name)
+                    print('Except - ',name)
             optimizer.step()
 
             _loss_t.append(lb_t.cpu().detach().numpy())
@@ -296,7 +305,7 @@ def fit_causal_batle(epochs,
         metric_train_y[e] = np.nanmean(_metrics_y)
         metric_train_d[e] = np.nanmean(_metrics_d)
         metric_train_r[e] = np.nanmean(_metrics_r)
-
+        #print('epoch  ', e, ' =',metric_train_t[e], metric_train_y[e])
         if use_validation:
             lm_val = _calculate_loss_metric_noopti(model=model, loader=loader_val, device=device,
                                                    criterion=criterion, metric_functions=metric_functions)
@@ -370,10 +379,10 @@ def _calculate_loss_metric_noopti(model, loader, device, criterion, metric_funct
     for i, batch in enumerate(loader):
         model.eval()
         predictions = model(batch[0].to(device))
-        lb_t, lb_y, lb_tg ,lb_d, lb_r, lb_a = _calculate_criterion_causalbatle(batch=batch,
-                                                                        criterion_function=criterion,
-                                                                        predictions=predictions,
-                                                                        device=device)
+        lb_t, lb_y, lb_tg, lb_d, lb_r, lb_a = _calculate_criterion_causalbatle(batch=batch,
+                                                                               criterion_function=criterion,
+                                                                               predictions=predictions,
+                                                                               device=device)
         _loss_t.append(lb_t.cpu().detach().numpy())
         _loss_y.append(lb_y.cpu().detach().numpy())
         _loss_tg.append(lb_tg.cpu().detach().numpy())
@@ -432,7 +441,7 @@ def criterion_function_t(batch, predictions, device='cpu'):
     # Weights
     loss = -t_predictions.log_prob(t_obs)
     loss = loss[d_obs == 1]
-    weights = weights.reshape(-1,1)[d_obs == 1]
+    weights = weights.reshape(-1, 1)[d_obs == 1]
     loss = torch.mul(loss, weights)
     return loss.mean()
 
@@ -460,15 +469,15 @@ def criterion_function_dragonnet_targeted(batch, predictions, device='cpu'):
     y_obs = batch[1][mask].to(device)
     t_obs = batch[2][mask].to(device)
 
-    t_predictions = predictions['t'].sample([1,1]).reshape(-1,1)[mask]#.cpu().detach().numpy()
-    y0_predictions = predictions['y0'].sample([1, 1]).reshape(-1, 1)[mask]#.cpu().detach().numpy()
-    y1_predictions = predictions['y1'].sample([1, 1]).reshape(-1, 1)[mask]#.cpu().detach().numpy()
+    t_predictions = predictions['t'].sample([1, 1]).reshape(-1, 1)[mask]  # .cpu().detach().numpy()
+    y0_predictions = predictions['y0'].sample([1, 1]).reshape(-1, 1)[mask]  # .cpu().detach().numpy()
+    y1_predictions = predictions['y1'].sample([1, 1]).reshape(-1, 1)[mask]  # .cpu().detach().numpy()
     epsilon = predictions['epsilon']
 
     y_pred = y0_predictions * (1 - t_obs) + y1_predictions * t_obs
     criterion = TargetedLoss()
-    #print('ep',epsilon.shape, y1_predictions.shape)
-    epsilon = epsilon.reshape(-1,1)[mask]
+    # print('ep',epsilon.shape, y1_predictions.shape)
+    epsilon = epsilon.reshape(-1, 1)[mask]
     return criterion(y_obs=y_obs, y_pred=y_pred, t_obs=t_obs, t_pred=t_predictions, epsilon=epsilon)
 
 
@@ -484,13 +493,14 @@ class TargetedLoss(nn.Module):
         t_pred = (t_pred + 0.01) / 1.02
         t1 = torch.div(t_obs, t_pred)
         t0 = torch.div(torch.sub(1, t_obs), torch.sub(1, t_pred))
-        epsilon = epsilon.reshape(-1,1)
+        epsilon = epsilon.reshape(-1, 1)
         t = torch.mul(torch.sub(t1, t0), epsilon)
         # epislon == 0 -> t is not used and result should be equal to rmse error
         pred = torch.add(y_pred, t)
         loss = torch.sub(y_obs, pred)
         loss = torch.pow(loss, 2)
         return torch.mean(loss)
+
 
 def criterion_function_discriminator(batch, predictions, device='cpu'):
     """ BCE loss. While T and Y are bayesian, D is kept non-bayesian due to discriminator/adversarial components.
@@ -511,7 +521,7 @@ def criterion_function_reconstruction(batch, predictions, device='cpu'):
     reconstruction = predictions['xr']
     x = batch[0].to(device)
     criterion = nn.MSELoss()
-    return criterion(reconstruction, x)
+    return criterion(reconstruction.ravel(), x.ravel())
 
 
 def criterion_function_adversarial(batch, predictions, device='cpu'):
@@ -537,5 +547,3 @@ def metric_function_discriminator(batch, predictions):
 def metric_function_reconstruction(batch, predictions):
     reconstruction = predictions['xr'].cpu().detach().numpy().reshape(-1, 1)
     return mean_squared_error(batch[0].reshape(-1, 1), reconstruction)
-
-

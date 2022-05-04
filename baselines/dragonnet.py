@@ -29,33 +29,29 @@ logger = logging.getLogger(__name__)
 
 
 class dragonnet(nn.Module):
-    def __init__(self, n_covariates, units1=200, units2=100,
+    def __init__(self, n_covariates=None, units1=200, units2=100,
                  units3=1, type_original=True, use_dropout=False,
-                 dropout_p=0):
+                 dropout_p=0, is_Image=False):
         super().__init__()
-        self.units1 = units1
-        self.units2 = units2
-        self.units3 = units3
-        self.representation_layer1_1 = nn.Linear(in_features=n_covariates, out_features=self.units1)
-        self.representation_layer1_2 = nn.Linear(in_features=self.units1, out_features=self.units1)
-        self.representation_layer1_3 = nn.Linear(in_features=self.units1, out_features=self.units1)
+        self.is_Image = is_Image
         self.type_original = type_original
+        if self.is_Image:
+            self.dragonnet_backbone = dragonnet_shared_image(units1=units1)
+        else:
+            print('making image model')
+            self.dragonnet_backbone = dragonnet_shared_regular(n_covariates=n_covariates,
+                                                               units1=units1,
+                                                               units2=units2,
+                                                               units3=units3,
+                                                               use_dropout=use_dropout,
+                                                               dropout_p=dropout_p)
+
         if self.type_original:
-            self.dragonnet_head = dragonnet_head(self.units1, self.units2, self.units3,
+            self.dragonnet_head = dragonnet_head(units1=units1, units2=units2, units3=units3,
                                                  use_dropout=use_dropout, dropout_p=dropout_p)
         else:
-            self.dragonnet_head = dragonnet_head(self.units1, self.units2, self.units3,
+            self.dragonnet_head = dragonnet_head(units1=units1, units2=units2, units3=units3,
                                                  use_dropout=use_dropout, dropout_p=dropout_p, bayesian=True)
-        # Activation functions.
-        self.elu = nn.ELU()
-        self.sigmoid = nn.Sigmoid()
-        self.use_dropout = use_dropout
-        self.dropout_p = dropout_p
-        self.batchnorm = nn.Identity() #nn.BatchNorm1d(self.units1)
-        if self.use_dropout:
-            self.dropout = nn.Dropout(p=self.dropout_p)
-        else:
-            self.dropout = nn.Identity()
 
     def forward(self, inputs):
         """
@@ -69,10 +65,65 @@ class dragonnet(nn.Module):
         :return:
         """
         # Shared presentation.
+        x = self.dragonnet_backbone(inputs)
+        return self.dragonnet_head(x)
+
+
+class dragonnet_shared_regular(nn.Module):
+    """ Regular Dragonnet Shared Representation
+    """
+
+    def __init__(self, n_covariates, units1=200, units2=100, units3=1, use_dropout=False, dropout_p=0):
+        super(dragonnet_shared_regular, self).__init__()
+        self.units1 = units1
+        self.units2 = units2
+        self.units3 = units3
+        self.use_dropout = use_dropout
+        self.dropout_p = dropout_p
+        self.representation_layer1_1 = nn.Linear(in_features=n_covariates, out_features=self.units1)
+        self.representation_layer1_2 = nn.Linear(in_features=self.units1, out_features=self.units1)
+        self.representation_layer1_3 = nn.Linear(in_features=self.units1, out_features=self.units1)
+        # Activation functions.
+        self.elu = nn.ELU()
+        self.sigmoid = nn.Sigmoid()
+        self.use_dropout = use_dropout
+        self.dropout_p = dropout_p
+        self.batchnorm = nn.Identity()  # nn.BatchNorm1d(self.units1)
+        if self.use_dropout:
+            self.dropout = nn.Dropout(p=self.dropout_p)
+        else:
+            self.dropout = nn.Identity()
+
+    def forward(self, inputs):
         x = self.elu(self.representation_layer1_1(self.dropout(inputs)))
         x = self.elu(self.representation_layer1_2(self.batchnorm(x)))
         x = self.elu(self.representation_layer1_3(x))
-        return self.dragonnet_head(self.batchnorm(self.dropout(x)))
+        return self.batchnorm(self.dropout(x))
+
+
+class dragonnet_shared_image(nn.Module):
+    """ Regular Dragonnet Shared Representation
+    """
+
+    def __init__(self, units1=20):
+        super(dragonnet_shared_image, self).__init__()
+        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+        self.conv2_drop = nn.Dropout2d()
+        self.fc1 = nn.Linear(320, units1)
+        self.fc2 = nn.Linear(units1, units1)
+
+    def forward(self, inputs):
+        x = inputs.reshape(inputs.shape[0], 1, inputs.shape[1], inputs.shape[2])
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+        x = x.view(-1, 320)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training)
+        # $x = self.fc2(x)
+        # return F.log_softmax(x)
+        x = self.fc2(x)
+        return x
 
 
 class dragonnet_head(nn.Module):
@@ -94,7 +145,7 @@ class dragonnet_head(nn.Module):
         self.head_layer2_2_1 = nn.Linear(in_features=self.units2, out_features=self.units2)
 
         # Activation functions.
-        #self.elu = nn.ELU(alpha=0.25)
+        # self.elu = nn.ELU(alpha=0.25)
         self.elu = nn.LeakyReLU(0.2)
         self.tahn = nn.Tanh()
 
@@ -133,7 +184,7 @@ class dragonnet_head(nn.Module):
         t_predictions = self.sigmoid(self.t_predictions(self.dropout(inputs)))
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        epsilon = self.epsilon_weight*torch.ones(inputs.shape[0]).to(device)
+        epsilon = self.epsilon_weight * torch.ones(inputs.shape[0]).to(device)
 
         predictions = {'y0': y0_predictions,
                        'y1': y1_predictions,
@@ -178,7 +229,7 @@ class TargetedLoss(nn.Module):
         t_pred = (t_pred + 0.01) / 1.02
         t1 = torch.div(t_obs, t_pred)
         t0 = torch.div(torch.sub(1, t_obs), torch.sub(1, t_pred))
-        epsilon = epsilon.reshape(-1,1)
+        epsilon = epsilon.reshape(-1, 1)
         t = torch.mul(torch.sub(t1, t0), epsilon)
 
         # epislon == 0 -> t is not used and result should be equal to rmse error
@@ -338,7 +389,7 @@ def fit_dragonnet(epochs,
         loss_train_ty[e] = np.mean(_loss_ty)
         metric_train_t[e] = np.mean(_metrics_t)
         metric_train_y[e] = np.mean(_metrics_y)
-        # print('epoch', e, loss_train_t[e], loss_train_y[e])
+        #print('epoch', e, loss_train_t[e], loss_train_y[e])
         if use_validation:
             model.eval()
             batch = next(iter(loader_val))
