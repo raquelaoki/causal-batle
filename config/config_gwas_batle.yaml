@@ -6,13 +6,13 @@ parameters:
     n_covariates: 10000
     n_sample: 2000
     repetitions: 25
-    seed: 2
+    seed: 4
     max_epochs: 100
-    batch_size: 350
+    batch_size: 250
     units1: 200
     units2: 100
     lr: 0.0001
-    weight_decay: 0.01
+    weight_decay: 0.001
     dropout_p: 0.25
     alpha: [4, 4,0.01, 1,4,1]
     use_validation: True

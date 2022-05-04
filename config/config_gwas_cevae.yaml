@@ -8,7 +8,7 @@ parameters:
     repetitions: 25
     seed: 4
     max_epochs: 100
-    batch_size: 200
+    batch_size: 100
     lr: 0.001
     weight_decay: 0.05
     alpha: [1]
