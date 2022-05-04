@@ -84,13 +84,13 @@ def _check_params_consistency(params):
     params['source_size_p'] = params.get('source_size_p', 0.2)
     params['use_tensorboard'] = params.get('use_tensorboard', False)
     params['use_validation'] = params.get('use_validation', False)
-    params['use_validation_best'] = params.get('use_validation_best', False) # TODO: change to false?
+    params['use_validation_best'] = params.get('use_validation_best', False)  # TODO: change to false?
     if params['use_validation_best']:
         assert params['use_validation_best'] == params['use_validation'], 'use_validation_best without use_validation'
 
     params['forward_passes'] = params.get('forward_passes', None)  # Used only for bdragonnet and batle.
     params['type_original'] = params.get('type_original', True)  # Original Dragonnet
-    params['filter_d'] = params.get('filter_d', False)  #  Battle only
+    params['filter_d'] = params.get('filter_d', False)  # Battle only
 
     assert params['data_name'] in valid_data_names, 'data_name not implemented!'
     assert params['model_name'] in valid_model_names, 'model_name not implemented!'
@@ -112,7 +112,7 @@ def _check_params_consistency(params):
         params['source_dig'] = params.get('source_dig', 3)
         params['source_size_p'] = 1
         params['is_Image'] = True
-        params['use_data_x_source']=False
+        params['use_data_x_source'] = False
     else:
         logger.debug('%s not implemented', params['data_name'])
 
@@ -144,8 +144,8 @@ def _check_params_consistency(params):
         params['use_source'] = True
         params['type_original'] = False
         params['filter_d'] = True
-        if params['data_name']=='hcminist':
-            params['use_data_x_source']=True
+        if params['data_name'] == 'hcminist':
+            params['use_data_x_source'] = True
         else:
             params['use_data_x_source'] = False
         assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
@@ -178,7 +178,7 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
               'use_tensorboard': use_tensorboard,
               'ate_method_list': ate_method_list,
               'repetitions': repetitions,
-              'forward_passes':forward_passes}
+              'forward_passes': forward_passes}
 
     if params['data_name'] == 'gwas':
         params = _make_parameters_data_gwas(params=params,

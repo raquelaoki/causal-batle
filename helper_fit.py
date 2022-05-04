@@ -59,7 +59,7 @@ def make_model(params, binfeat=[], contfeat=[]):
         fit = dragonnet.fit_dragonnet
         ate = ha.calculate_ate_bayesian
     elif params['model_name'] == 'aipw':
-        model = aipw.aipw(n_covariates=params['n_covariates'])
+        model = aipw.aipw(n_covariates=params['n_covariates'], is_Image=params['is_Image'])
         criterion = [aipw.criterion_function_aipw_t,
                      aipw.criterion_function_aipw_y,
                      aipw.criterion_function_aipw_y]
