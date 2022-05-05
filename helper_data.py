@@ -334,7 +334,6 @@ class HCMNIST(datasets.MNIST):
             source_samples = list(range(self.x_s.shape[0]))
             np.random.shuffle(source_samples)
             n_s = int(round(self.x_s.shape[0] * (how_many_source_dig / 8), 0))
-            print(n_s)
             source_samples_selection = source_samples[0:n_s]
             self.x_s = self.x_s[source_samples_selection]
             self.target_s = self.target_s[source_samples_selection]
