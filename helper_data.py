@@ -276,7 +276,9 @@ def make_ihdp(params):
 
 def make_hcminist(params):
     seed = params['seed']
-    data_setting = HCMNIST('', download=True, seed=seed, source_dig=params['source_dig'])
+    data_setting = HCMNIST('', download=True, seed=seed,
+                           use_source_dig=params['use_source_dig'],
+                           how_many_source_dig=params['how_many_source_dig'])
     data = make_DataClass(data_x=data_setting.x_t,
                           data_y=data_setting.y_t,
                           data_t=data_setting.t_t,
@@ -295,28 +297,47 @@ def make_hcminist(params):
 
 
 class HCMNIST(datasets.MNIST):
-    def __init__(
-            self,
-            root=None,
-            download=False,
-            source_dig=9,
-            seed=0
-    ):
+    def __init__(self,
+                 root=None,
+                 download=False,
+                 use_source_dig=True,
+                 how_many_source_dig=1,
+                 seed=0,
+                 ):
         # https://pytorch.org/vision/stable/datasets.html
+        self.t_t = None
+        self.y_t = None
+        self.tau = None
         self.__class__.__name__ = "MNIST"
         super(HCMNIST, self).__init__(root, train=True, download=download)
         self.seed = seed
         self.data = (self.data.float().div(255) - 0.1307).div(0.3081)
-        self.x_t = self.data[self.targets < 2]
-        self.target_t = self.targets[self.targets < 2]
 
-        self.x_s = self.data[self.targets >= 2]
-        self.target_s = self.targets[self.targets >= 2]
+        np.random.seed(self.seed)
+        digits = list(range(10))
+        np.random.shuffle(digits)
 
-        if source_dig < 9:
-            assert source_dig >= 2, 'Wrong source_dig! Values should be between 0 and 9, received ' + str(source_dig)
-            self.x_s = self.x_s[self.target_s < source_dig]
-            self.target_s = self.target_s[self.target_s < source_dig]
+        mask_target = np.in1d(self.targets.numpy(), digits[0:2])
+        self.x_t = self.data[mask_target]
+        self.target_t = self.targets[mask_target]
+
+        if use_source_dig:
+            assert how_many_source_dig < 8, 'Not enought how_many_source_dig - Max is 8, received ' + str(
+                how_many_source_dig)
+            mask_source = np.in1d(self.targets.numpy(), digits[2:(2 + how_many_source_dig)])
+            self.x_s = self.data[mask_source]
+            self.target_s = self.targets[mask_source]
+        else:
+            mask_source = np.in1d(self.targets.numpy(), digits[2:(2 + how_many_source_dig)])
+            self.x_s = self.data[mask_source]
+            self.target_s = self.targets[mask_source]
+            source_samples = list(range(self.x_s.shape[0]))
+            np.random.shuffle(source_samples)
+            n_s = int(round(self.x_s.shape[0] * (how_many_source_dig / 8), 0))
+            print(n_s)
+            source_samples_selection = source_samples[0:n_s]
+            self.x_s = self.x_s[source_samples_selection]
+            self.target_s = self.target_s[source_samples_selection]
 
         #  Simulates t and y
         self.create_hcmnist()

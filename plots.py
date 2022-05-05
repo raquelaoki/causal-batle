@@ -33,7 +33,8 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/')
         '20%': '(' + str(0.25) + ')',
         '40%': '(' + str(0.67) + ')',
         '60%': '(' + str(1.5) + ')',
-        '80%': '(' + str(4) + ')'
+        '80%': '(' + str(4) + ')',
+        '100%': '-',
     }
     table['source_size_p'] = [item + ratios[item] for item in table['source_size_p']]
     table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]

@@ -109,7 +109,8 @@ def _check_params_consistency(params):
         params['n_sample'] = params.get('n_sample', 747)
         params['is_Image'] = False
     elif params['data_name'] == 'hcminist':
-        params['source_dig'] = params.get('source_dig', 3)
+        params['how_many_source_dig'] = params.get('how_many_source_dig', 1)
+        params['use_source_dig'] = params.get('use_source_dig', True)
         params['source_size_p'] = 1
         params['is_Image'] = True
         params['use_data_x_source'] = False
