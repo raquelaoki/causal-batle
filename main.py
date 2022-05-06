@@ -11,6 +11,7 @@ import numpy as np
 from utils import read_config_names, repeat_experiment
 import helper_parameters as hp
 
+
 def main(paths_args):
     """ Main function of the project.
     It loads config settings, dataset, run all the methods, save output.
@@ -21,9 +22,9 @@ def main(paths_args):
     # Find the path+name of all config files in a given  folder
     configs = read_config_names(paths_args['config'])
 
-    #if paths_args['load_previous_table']:
+    # if paths_args['load_previous_table']:
     #    table = pd.read_csv(paths_args['load_previous_table_path'], index_col=[0])
-    #else:
+    # else:
     table_all = pd.DataFrame()
 
     # Run models for all config files
@@ -38,6 +39,10 @@ def main(paths_args):
         table['mae_aipw'] = table['tau'] - table['ate_aipw_all']
         table['mae_naive'] = np.abs(table['mae_naive'].values)
         table['mae_aipw'] = np.abs(table['mae_aipw'].values)
+        fix_type = ['batch', 'epochs', 'data_rep', 'repetitions']
+        for col in fix_type:
+            table[col] = table[col].astype(float)
+
         _print = params.get('print', False)
         if _print:
             table_stats = table[['config', 'source_size_p', 'mae_naive', 'mae_aipw']]

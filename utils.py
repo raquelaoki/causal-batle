@@ -58,9 +58,9 @@ def run_model(params, model_seed=0, good_runs=0):
             good_runs += 1
         except ValueError:
             model_seed = model_seed + 1
-            params['seed_add_on'] = params['seed_add_on']+1
-            print('...value error (good runs before - ',good_runs,')' )
-            good_runs=0
+            params['seed_add_on'] = params['seed_add_on'] + 1
+            print('...value error (good runs before - ', good_runs, ')')
+            good_runs = 0
 
     return metrics, loss, ate, tau, good_runs
 
@@ -75,24 +75,35 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
     :return:
     """
 
-    columns = ['model_name', 'config', 'data_name','config_rep' ,'tau', 'b', 'source_size_p',
+    columns = ['model_name', 'config', 'data_name', 'config_rep', 'tau', 'b', 'seed', 'source_size_p',
                'ate_naive_all', 'ate_naive_train', 'ate_naive_test',
                'ate_aipw_all', 'ate_aipw_train', 'ate_aipw_test',
                'epochs', 'alpha', 'lr', 'wd', 'x_t_shape', 'x_s_shape',
-               'batch', 'dropout'
+               'batch', 'dropout', 'repetitions', 'data_rep', 'range_size'
                ]
 
     if table.empty:
         table = pd.DataFrame(columns=set(columns))
 
+    if params['model_name'] == 'batle':
+        source_size = params.get('source_size', 0)
+        if params['use_fix_digit']:
+            use_fix_digit = '_fix'
+        else:
+            use_fix_digit = '_random'
+    else:
+        source_size = None
+        use_fix_digit = ''
+
     out = {
         'model_name': params['model_name'],
         'data_name': params['data_name'],
-        'config': params['data_name']+'_'+params['model_name'],
+        'config': params['data_name'] + '_' + params['model_name'] + use_fix_digit,
         'config_rep': params['config_name_seeds'],
         'tau': tau,
         'b': b,
-        'source_size_p': params.get('source_size_p',1),
+        'seed': params['seed'],
+        'source_size_p': params.get('source_size_p', 1),
         'ate_naive_train': ate['ate_naive_train'],
         'ate_aipw_train': ate['ate_aipw_train'],
         'ate_naive_all': ate['ate_naive_all'],
@@ -103,10 +114,13 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
         'epochs': params['max_epochs'],
         'wd': params['weight_decay'],
         'lr': params['lr'],
-        'x_t_shape': params.get('target_size',0),
-        'x_s_shape': params.get('source_size',0),
+        'x_t_shape': params.get('target_size', 1),
+        'x_s_shape': source_size,
         'batch': params['batch_size'],
         'dropout': params['dropout_p'],
+        'repetitions': params['repetitions'],
+        'data_rep': params['seed'],
+        'range_size': params.get('target_size', 1) * params.get('source_size_p', 1),
     }
     table = table.append(out, ignore_index=True)
     return table[columns]
@@ -144,7 +158,7 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     for seed in range(n_seeds):
         params['seed'] = seed
         print('seed ', seed)
-        logger.debug('seed '+str(seed))
+        logger.debug('seed ' + str(seed))
         config_name = params['config_name']
         good_runs = 0
         for i in range(b):
@@ -161,8 +175,11 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
                 print(params['config_name_seeds'])
                 metrics, loss, ate, tau, good_runs = run_model(params, model_seed=i, good_runs=good_runs)
                 table = organize(params, ate, tau, table, b=i)
+        table['data_rep'] = n_seeds
         if save:
             table.to_csv(output_save + '.csv', sep=',')
+
+    table['data_rep'] = n_seeds
     return table
 
 

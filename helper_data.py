@@ -281,7 +281,7 @@ def make_hcmnist(params):
                            use_fix_digit=params['use_fix_digit'],
                            target_size=params['target_size'],
                            use_source=params['use_source'],
-                           source_size=parmas['source_size'],
+                           source_size=params['source_size'],
                            )
     data = make_DataClass(data_x=data_setting.x_t,
                           data_y=data_setting.y_t,
@@ -320,7 +320,7 @@ class HCMNIST(datasets.MNIST):
         self.data = (self.data.float().div(255) - 0.1307).div(0.3081)
 
         #  Fix seed and randomizing digits
-        np.random.seed(self.seed)
+        np.random.seed(self.seed+100)
         digits = list(range(10))
         np.random.shuffle(digits)
 
@@ -353,7 +353,8 @@ class HCMNIST(datasets.MNIST):
             source_samples_selection = source_samples[0:source_size]
             self.x_s = self.x_s[source_samples_selection]
             #self.target_s = self.target_s[source_samples_selection]
-
+        else:
+            self.x_s = None
         #  Simulates t and y
         self.create_hcmnist()
 
