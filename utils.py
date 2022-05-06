@@ -22,8 +22,8 @@ def make_data(params):
         return data, tau
     elif params['data_name'] == 'ihdp':
         return hd.make_ihdp(params)
-    elif params['data_name'] == 'hcminist':
-        return hd.make_hcminist(params)
+    elif params['data_name'] == 'hcmnist':
+        return hd.make_hcmnist(params)
     else:
         raise NotImplementedError(params['data_name'])
 
@@ -52,7 +52,7 @@ def run_model(params, model_seed=0, good_runs=0):
                                                   use_tensorboard=params['use_tensorboard'],
                                                   model_seed=model_seed,
                                                   binfeat=data.binfeat,
-                                                  contfeat=data.contfeat
+                                                  contfeat=data.contfeat,
                                                   )
             success = True
             good_runs += 1
@@ -77,7 +77,10 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
 
     columns = ['model_name', 'config', 'data_name','config_rep' ,'tau', 'b', 'source_size_p',
                'ate_naive_all', 'ate_naive_train', 'ate_naive_test',
-               'ate_aipw_all', 'ate_aipw_train', 'ate_aipw_test']
+               'ate_aipw_all', 'ate_aipw_train', 'ate_aipw_test',
+               'epochs', 'alpha', 'lr', 'wd', 'x_t_shape', 'x_s_shape',
+               'batch', 'dropout'
+               ]
 
     if table.empty:
         table = pd.DataFrame(columns=set(columns))
@@ -89,13 +92,21 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
         'config_rep': params['config_name_seeds'],
         'tau': tau,
         'b': b,
-        'source_size_p': params['source_size_p'],
+        'source_size_p': params.get('source_size_p',1),
         'ate_naive_train': ate['ate_naive_train'],
         'ate_aipw_train': ate['ate_aipw_train'],
         'ate_naive_all': ate['ate_naive_all'],
         'ate_aipw_all': ate['ate_aipw_all'],
         'ate_naive_test': ate['ate_naive_test'],
         'ate_aipw_test': ate['ate_aipw_test'],
+        'alpha': params['alpha'],
+        'epochs': params['max_epochs'],
+        'wd': params['weight_decay'],
+        'lr': params['lr'],
+        'x_t_shape': params.get('target_size',0),
+        'x_s_shape': params.get('source_size',0),
+        'batch': params['batch_size'],
+        'dropout': params['dropout_p'],
     }
     table = table.append(out, ignore_index=True)
     return table[columns]
@@ -113,7 +124,7 @@ def read_config_names(path):
 
 
 def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, source_size_p=None,
-                      save=False, output_save=''):
+                      save=False, output_save='', target_size=None):
     """ Repeat the experiment b times.
     This function perform b repetitions of (Dataset, Model, Ate) - set by the config/params file.
     :param output_save:
@@ -121,7 +132,8 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     :param params: dictinary
     :param table: pd.DataFrame() - if not given, a new dataframe will be created.
     :param use_range_source_p: Bool, if true, we explore a range of source_size_p values (valid only for GWAS and IHDP)
-    :param source_size_p: list with proportions.
+    :param source_size_p: list with proportions (GWAS and IHDP).
+    :param target_size: list with target sizes (MNIST).
     :return: pd.Dataframe with results of the b repetitions.
     """
     print(params['model_name'])
@@ -136,9 +148,13 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
         config_name = params['config_name']
         good_runs = 0
         for i in range(b):
-            #print('b ', i)
             if use_range_source_p:
-                table, good_runs = range_source_p(params, table, source_size_p, b=i, good_runs=good_runs)
+                table, good_runs = range_source_p(params=params,
+                                                  table=table,
+                                                  b=i,
+                                                  good_runs=good_runs,
+                                                  source_size_p=source_size_p,
+                                                  target_size=target_size)
             else:
                 params['config_name_seeds'] = config_name + '_' + 'seed' + str(
                     params['seed']) + '_' + 'b' + str(i)
@@ -150,7 +166,7 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     return table
 
 
-def range_source_p(params, table, source_size_p=None, b=1, good_runs=0):
+def range_source_p(params, table, source_size_p=None, b=1, good_runs=0, target_size=None):
     """ Creates a range of experiments with same set of parameters, but different source_size_p.
     source_size_p: proportion of input data splited between target and source domain.
     Note 1: that this only makes sense on the GWAS and IHDP datasets, where we are artificially spliting the dataset
@@ -162,17 +178,28 @@ def range_source_p(params, table, source_size_p=None, b=1, good_runs=0):
     :param b: repetitions (not make inside this function, used only for organize())
     :return: pd.DataFrame() with range of experiments.
     """
-    if not source_size_p:
-        source_size_p = [0.2, 0.4, 0.6, 0.8]
+    if params['data_name'] == 'hcmnist':
+        if not target_size:
+            range_sizes = [250, 500, 1000, 2000]
+        else:
+            range_sizes = target_size
     else:
-        assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
-    condig_name = params['config_name']
-    for p in source_size_p:
-        params['config_name'] = condig_name + '_' + str(p) + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(b)
-        params['source_size_p'] = p
+        if not source_size_p:
+            range_sizes = [0.2, 0.4, 0.6, 0.8]
+        else:
+            assert max(source_size_p) < 1 and min(source_size_p) > 0, 'Values on array are outsise range(0,1)'
+            range_sizes = source_size_p
+
+    config_name = params['config_name']
+    for p in range_sizes:
+        params['config_name'] = config_name + '_' + str(p) + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(b)
+        if params['data_name'] == 'hcmnist':
+            params['target_size'] = p
+        else:
+            params['source_size_p'] = p
         params['config_name_seeds'] = params['config_name']
         metrics, loss, ate, tau, good_runs = run_model(params, model_seed=b, good_runs=good_runs)
         table = organize(params, ate, tau, table, b=b)
 
-    params['config_name'] = condig_name
+    params['config_name'] = config_name
     return table, good_runs
