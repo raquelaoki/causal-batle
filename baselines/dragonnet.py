@@ -38,7 +38,6 @@ class dragonnet(nn.Module):
         if self.is_Image:
             self.dragonnet_backbone = dragonnet_shared_image(units1=units1)
         else:
-            print('making image model')
             self.dragonnet_backbone = dragonnet_shared_regular(n_covariates=n_covariates,
                                                                units1=units1,
                                                                units2=units2,
