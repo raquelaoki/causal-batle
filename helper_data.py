@@ -68,9 +68,10 @@ class DataTargetAndSource:
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch, drop_last=True)
 
         if self.use_validation:
+            max_size = int(np.min([len(self.t_val), batch]))
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val),
                                         Tensor(self.t_val), Tensor(self.d_val))
-            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=batch, drop_last=True)
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=max_size, drop_last=True)
         else:
             loader_val = None
 
@@ -117,8 +118,9 @@ class DataTarget:
         loader_all = DataLoader(dataset_all, shuffle=False, batch_size=batch, drop_last=True)
 
         if self.use_validation:
+            max_size = int(np.min([len(self.y_val), batch]))
             dataset_val = TensorDataset(Tensor(self.x_val), Tensor(self.y_val), Tensor(self.t_val))
-            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=batch, drop_last=True)
+            loader_val = DataLoader(dataset_val, shuffle=True, batch_size=max_size, drop_last=True)
         else:
             loader_val = None
 
@@ -258,14 +260,13 @@ def make_ihdp(params):
     assert 0 <= seed <= 8, 'Seed/Id out of range (0-8) ---' + str(seed)
     data_setting = bcdata.ihdp_data(path='/content/data/ihdp/', id=seed)
     data_x, data_y, data_t, tau = data_setting.generate_samples()
-
     data = make_DataClass(data_x=data_x,
                           data_y=data_y,
                           data_t=data_t,
                           seed=seed,
                           source_size=params['source_size_p'],
                           use_validation=params['use_validation'],
-                          use_source=params['use_source'],
+                          use_source=params['use_validation'],
                           binfeat=list(range(6, 25)),
                           contfeat=list(range(6)),
                           seed_add_on=params['seed_add_on'],
@@ -274,11 +275,14 @@ def make_ihdp(params):
     return data, tau
 
 
-def make_hcminist(params):
+def make_hcmnist(params):
     seed = params['seed']
     data_setting = HCMNIST('', download=True, seed=seed,
-                           use_source_dig=params['use_source_dig'],
-                           how_many_source_dig=params['how_many_source_dig'])
+                           use_fix_digit=params['use_fix_digit'],
+                           target_size=params['target_size'],
+                           use_source=params['use_source'],
+                           source_size=parmas['source_size'],
+                           )
     data = make_DataClass(data_x=data_setting.x_t,
                           data_y=data_setting.y_t,
                           data_t=data_setting.t_t,
@@ -300,9 +304,11 @@ class HCMNIST(datasets.MNIST):
     def __init__(self,
                  root=None,
                  download=False,
-                 use_source_dig=True,
-                 how_many_source_dig=1,
+                 use_fix_digit=True,
+                 target_size=1000,
                  seed=0,
+                 use_source=False,
+                 source_size=1000
                  ):
         # https://pytorch.org/vision/stable/datasets.html
         self.t_t = None
@@ -313,30 +319,40 @@ class HCMNIST(datasets.MNIST):
         self.seed = seed
         self.data = (self.data.float().div(255) - 0.1307).div(0.3081)
 
+        #  Fix seed and randomizing digits
         np.random.seed(self.seed)
         digits = list(range(10))
         np.random.shuffle(digits)
 
+        #  Pick two digits to be on target-domain.
         mask_target = np.in1d(self.targets.numpy(), digits[0:2])
         self.x_t = self.data[mask_target]
         self.target_t = self.targets[mask_target]
 
-        if use_source_dig:
-            assert how_many_source_dig < 8, 'Not enought how_many_source_dig - Max is 8, received ' + str(
-                how_many_source_dig)
-            mask_source = np.in1d(self.targets.numpy(), digits[2:(2 + how_many_source_dig)])
-            self.x_s = self.data[mask_source]
-            self.target_s = self.targets[mask_source]
-        else:
-            mask_source = np.in1d(self.targets.numpy(), digits[2:(2 + how_many_source_dig)])
-            self.x_s = self.data[mask_source]
-            self.target_s = self.targets[mask_source]
+        # Getting correct number of samples on target-domain.
+        target_samples = list(range(self.x_t.shape[0]))
+        np.random.shuffle(target_samples)
+        target_samples_selection = target_samples[0:target_size]
+        self.x_t = self.x_t[target_samples_selection]
+        self.target_t = self.target_t[target_samples_selection]
+
+        # Setting source-domain:
+        if use_source:
+            if use_fix_digit:
+                mask_source = np.in1d(self.targets.numpy(), digits[-1])  #  Last Digit as source-domain.
+                self.x_s = self.data[mask_source]
+               # self.target_s = self.targets[mask_source]
+            else:
+                mask_source = np.in1d(self.targets.numpy(), digits[2:])  #  Any other digit can be used.
+                self.x_s = self.data[mask_source]
+                #self.target_s = self.targets[mask_source]
+
+            # Fixing sample size as source_size
             source_samples = list(range(self.x_s.shape[0]))
             np.random.shuffle(source_samples)
-            n_s = int(round(self.x_s.shape[0] * (how_many_source_dig / 8), 0))
-            source_samples_selection = source_samples[0:n_s]
+            source_samples_selection = source_samples[0:source_size]
             self.x_s = self.x_s[source_samples_selection]
-            self.target_s = self.target_s[source_samples_selection]
+            #self.target_s = self.target_s[source_samples_selection]
 
         #  Simulates t and y
         self.create_hcmnist()

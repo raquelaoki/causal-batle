@@ -61,7 +61,7 @@ def _check_params_consistency(params):
     :return: dictionary with parameters after consistency tests.
     """
     valid_model_names = ['dragonnet', 'aipw', 'bdragonnet', 'batle', 'cevae']
-    valid_data_names = ['ihdp', 'gwas', 'hcminist']
+    valid_data_names = ['ihdp', 'gwas', 'hcmnist']
 
     assert 'data_name' in params, 'data_name missing!'
     assert 'model_name' in params, 'model_name missing!'
@@ -108,12 +108,13 @@ def _check_params_consistency(params):
         params['n_covariates'] = params.get('n_covariates', 25)
         params['n_sample'] = params.get('n_sample', 747)
         params['is_Image'] = False
-    elif params['data_name'] == 'hcminist':
-        params['how_many_source_dig'] = params.get('how_many_source_dig', 1)
-        params['use_source_dig'] = params.get('use_source_dig', True)
-        params['source_size_p'] = 1
+    elif params['data_name'] == 'hcmnist':
         params['is_Image'] = True
         params['use_data_x_source'] = False
+        params['use_fix_digit'] = params.get('use_fix_digit', True)
+        params['target_size'] = params.get('target_size', 1000)
+        params['source_size'] = params.get('source_size', 1000)
+        params['use_source'] = params.get('use_source',False)
     else:
         logger.debug('%s not implemented', params['data_name'])
 
@@ -145,7 +146,7 @@ def _check_params_consistency(params):
         params['use_source'] = True
         params['type_original'] = False
         params['filter_d'] = True
-        if params['data_name'] == 'hcminist':
+        if params['data_name'] == 'hcmnist':
             params['use_data_x_source'] = True
         else:
             params['use_data_x_source'] = False
