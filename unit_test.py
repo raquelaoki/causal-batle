@@ -14,6 +14,7 @@ import pandas as pd
 import helper_data as dp
 from helper_parameters import parameter_debug, _check_params_consistency
 from utils import run_model, repeat_experiment
+import torch
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -74,11 +75,12 @@ class DataPrep(unittest.TestCase):
                   'use_validation': False}
 
         params = _check_params_consistency(params)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        table = repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False,
-                                  save=False, output_save='')
-        self.assertFalse(math.isnan(table['ate_naive_train'].values[0]), 'IHDP+CEVAE failed.')
-
+        if device=='cpu':
+            table = repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False,
+                                      save=False, output_save='')
+            self.assertFalse(math.isnan(table['ate_naive_train'].values[0]), 'IHDP+CEVAE failed.')
 
 if __name__ == '__main__':
     unittest.main()
