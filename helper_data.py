@@ -320,7 +320,7 @@ class HCMNIST(datasets.MNIST):
         self.data = (self.data.float().div(255) - 0.1307).div(0.3081)
 
         #  Fix seed and randomizing digits
-        np.random.seed(self.seed+100)
+        np.random.seed(self.seed+1000)
         digits = list(range(10))
         np.random.shuffle(digits)
 
