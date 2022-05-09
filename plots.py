@@ -13,7 +13,8 @@ warnings.filterwarnings("ignore")
 sns.set_style("whitegrid")
 
 
-def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/'):
+def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
+                         is_Image=False):
     files = os.listdir(path)
     files = [os.path.join(path, f) for f in files]
     table = pd.DataFrame()
@@ -27,20 +28,35 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/')
                  'aipw': 'AIPW'}
 
     table['model_name'] = [new_names[item] for item in table['model_name']]
-    table['source_size_p'] = table['source_size_p'] * 100
-    table['source_size_p'] = [str(round(item)) + '%' for item in table['source_size_p']]
-    ratios = {
-        '20%': '(' + str(0.25) + ')',
-        '40%': '(' + str(0.67) + ')',
-        '60%': '(' + str(1.5) + ')',
-        '80%': '(' + str(4) + ')',
-        '100%': '-',
-    }
-    table['source_size_p'] = [item + ratios[item] for item in table['source_size_p']]
-    table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
-    print(table_stats.groupby(['model_name', 'source_size_p']).mean())
+    if is_Image:
+        table['range_size'] = [str(round(item)) for item in table['range_size']]
 
-    return table
+        ratios = {
+            '250': '(' + str(round(250/1000, 2)) + ')',
+            '500': '(' + str(round(500/1000, 2)) + ')',
+            '750': '(' + str(round(750/1000, 2)) + ')',
+            '1000': '(' + str(round(1000/1000, 2)) + ')',
+        }
+        table['range_size'] = [item + ratios[item] for item in table['range_size']]
+        table.range_size = table.range_size.astype('category')
+        table.range_size.cat.set_categories(['250(0.25)', '500(0.5)', '750(0.75)', '1000(1.0)'], inplace=True)
+        table_stats = table[['model_name', 'range_size', 'mae_naive', 'mae_aipw']]
+        print(table_stats.groupby(['model_name', 'range_size']).mean())
+        return table
+    else:
+        table['source_size_p'] = table['source_size_p'] * 100
+        table['source_size_p'] = [str(round(item)) + '%' for item in table['source_size_p']]
+        ratios = {
+            '20%': '(' + str(0.25) + ')',
+            '40%': '(' + str(0.67) + ')',
+            '60%': '(' + str(1.5) + ')',
+            '80%': '(' + str(4) + ')',
+            '100%': '-',
+        }
+        table['source_size_p'] = [item + ratios[item] for item in table['source_size_p']]
+        table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
+        print(table_stats.groupby(['model_name', 'source_size_p']).mean())
+        return table
 
 
 def read_table(filename,
@@ -101,7 +117,7 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
               methods_order=None, data_name='', ncol_legend=3):
     sns.set(rc={'figure.figsize': figsize})
     sns.set(font_scale=font_scale)
-    methods_rep = pd.unique(table['source_size_p'].values)
+    methods_rep = pd.unique(table[group_name_x].values)
     if not methods_order:
         methods_order = pd.unique(table['model_name'].values)
 
