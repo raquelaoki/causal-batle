@@ -32,10 +32,10 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
         table['range_size'] = [str(round(item)) for item in table['range_size']]
 
         ratios = {
-            '250': '(' + str(round(250/1000, 2)) + ')',
-            '500': '(' + str(round(500/1000, 2)) + ')',
-            '750': '(' + str(round(750/1000, 2)) + ')',
-            '1000': '(' + str(round(1000/1000, 2)) + ')',
+            '250': '(' + str(round(250 / 1000, 2)) + ')',
+            '500': '(' + str(round(500 / 1000, 2)) + ')',
+            '750': '(' + str(round(750 / 1000, 2)) + ')',
+            '1000': '(' + str(round(1000 / 1000, 2)) + ')',
         }
         table['range_size'] = [item + ratios[item] for item in table['range_size']]
         table.range_size = table.range_size.astype('category')
@@ -82,6 +82,8 @@ def read_table(filename,
 def set_colors(methods_order,
                our_method='C-Batle',
                two_colors=['#FF8C00', '#1e90ff']):
+    two_colors = [sns.color_palette("YlOrBr", n_colors=8)[4],
+        sns.color_palette("Blues", n_colors=8)[4]]
     # two_colors: first posision are baselines, second are our proposed method
     return [two_colors[1] if method == our_method else two_colors[0] for method in methods_order]
 
@@ -147,20 +149,22 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
     return ax
 
 
-def plot_around_treat(table, seed, metric_name, labely_name, methods_order,
+def plot_around_treat(table, seed, metric_name, labely_name, methods_order, ax=None,
                       save_plot=False, fontsize=15, font_scale=1.3, figsize=(8, 5),
                       title='swarm', data_name=''):
     sns.set(rc={'figure.figsize': figsize})
     sns.set(font_scale=font_scale)
     taus = pd.unique(table['tau'])
     table = table[table['tau'] == taus[seed]]
-    table['source_size_p'] = ['p=' + str(item) for item in table['source_size_p']]
+    # table['source_size_p'] = ['p=' + str(item) for item in table['source_size_p']]
     sns.set(font_scale=font_scale)
     colors_order = set_colors(methods_order=methods_order)
-    ax = sns.swarmplot(x='model_name', y=metric_name,
+    ax = sns.swarmplot(x='model_name',
+                       y=metric_name,
                        data=table,
                        palette=sns.color_palette(colors_order),
-                       size=8
+                       size=8,
+                       ax=ax
                        )
     ax.set_xticklabels(ax.get_xticklabels())  # rotation=90
     ax.axhline(y=taus[seed], color='black', linestyle='-', linewidth=3)
@@ -170,3 +174,38 @@ def plot_around_treat(table, seed, metric_name, labely_name, methods_order,
     if save_plot:
         plt.savefig(data_name + '_' + title + str(seed) + '.png', dpi=300, bbox_inches='tight')
     return ax
+
+
+def plot_around_treat_colors(table, seed, metric_name, labely_name, hue,
+                             ax=None, save_plot=False, fontsize=15, font_scale=1.3,
+                             figsize=(8, 5), title='swarm', data_name=''):
+    sns.set(rc={'figure.figsize': figsize})
+    sns.set(font_scale=font_scale)
+    taus = pd.unique(table['tau'])
+    table = table[table['tau'] == taus[seed]]
+    sns.set(font_scale=font_scale)
+    cmap = sns.color_palette("Blues", n_colors=6)[2:]
+    ax = sns.swarmplot(x='model_name', y=metric_name,
+                       data=table, size=8,
+                       hue=hue, dodge=False,
+                       palette=cmap, ax=ax
+                       )
+    ax.set_xticklabels(ax.get_xticklabels())  # rotation=90
+    ax.axhline(y=taus[seed], color='black', linestyle='-', linewidth=3)
+    tau = round(taus[seed], 2)
+
+    table = table[table['model_name'] != 'C-Batle']
+    cmap = sns.color_palette("YlOrBr", n_colors=8)[2:6]
+    ax = sns.swarmplot(x='model_name', y=metric_name,
+                       data=table, size=8,
+                       hue=hue, dodge=False,
+                       palette=cmap
+                       )
+    ax.get_legend().remove()
+    ax.set_ylabel(labely_name + '(τ=' + str(tau) + ')', fontsize=fontsize)
+    ax.set_xlabel('Dataset Replication ' + str(seed), fontsize=fontsize)
+
+    if save_plot:
+        plt.savefig(data_name + '_colors_' + title + str(seed) + '.png', dpi=300, bbox_inches='tight')
+    return ax
+
