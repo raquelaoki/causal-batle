@@ -329,12 +329,17 @@ class HCMNIST(datasets.MNIST):
         self.x_t = self.data[mask_target]
         self.target_t = self.targets[mask_target]
 
+        #  Simulates t and y
+        self.create_hcmnist()
+
         # Getting correct number of samples on target-domain.
         target_samples = list(range(self.x_t.shape[0]))
         np.random.shuffle(target_samples)
         target_samples_selection = target_samples[0:target_size]
         self.x_t = self.x_t[target_samples_selection]
         self.target_t = self.target_t[target_samples_selection]
+        self.t_t = self.t_t[target_samples_selection]
+        self.y_t = self.y_t[target_samples_selection]
 
         # Setting source-domain:
         if use_source:
@@ -355,8 +360,7 @@ class HCMNIST(datasets.MNIST):
             #self.target_s = self.target_s[source_samples_selection]
         else:
             self.x_s = None
-        #  Simulates t and y
-        self.create_hcmnist()
+
 
     def _fit_phi_model(self, domain=2):
 
