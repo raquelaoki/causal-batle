@@ -4,9 +4,7 @@ https://github.com/claudiashi57/dragonnet/blob/master/src/experiment/models.py
 https://github.com/raquelaoki/M3E2/blob/main/resources/dragonnet.py
 
 Alternative implementation of the Dragonnet model: A neural network to estimate treatment effects.
-Adopting pytorch
-
-TODO: add paper
+Adopting to pytorch
 """
 import logging
 import numpy as np
@@ -324,11 +322,6 @@ def fit_dragonnet(epochs,
     if alpha[-1] != 0:
         tarnet_criterion = criterion_function_dragonnet_targeted
 
-    # use prefetch_generator and tqdm for iterating through data
-    # pbar = tqdm(enumerate(BackgroundGenerator(train_data_loader, ...)),
-    #            total=len(train_data_loader))
-    # start_time = time.time()
-
     if use_tensorboard:
         writer_tensorboard = ht.TensorboardWriter(path_logger=path_logger,
                                                   config_name=config_name,
@@ -388,7 +381,6 @@ def fit_dragonnet(epochs,
         loss_train_ty[e] = np.mean(_loss_ty)
         metric_train_t[e] = np.mean(_metrics_t)
         metric_train_y[e] = np.mean(_metrics_y)
-        #print('epoch', e, loss_train_t[e], loss_train_y[e])
         if use_validation:
             model.eval()
             batch = next(iter(loader_val))

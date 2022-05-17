@@ -1,6 +1,3 @@
-"""
-Written by Raquel Aoki
-"""
 import logging
 import os
 import pandas as pd
@@ -22,9 +19,6 @@ def main(paths_args):
     # Find the path+name of all config files in a given  folder
     configs = read_config_names(paths_args['config'])
 
-    # if paths_args['load_previous_table']:
-    #    table = pd.read_csv(paths_args['load_previous_table_path'], index_col=[0])
-    # else:
     table_all = pd.DataFrame()
 
     # Run models for all config files

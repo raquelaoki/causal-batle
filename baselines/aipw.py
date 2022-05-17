@@ -8,7 +8,6 @@ import torch.nn.functional as F
 from sklearn.metrics import mean_squared_error, roc_auc_score
 from sklearn.model_selection import train_test_split
 from torch import Tensor
-#from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 # Local Imports
 import utils
@@ -27,14 +26,12 @@ class imageRegression(nn.Module):
         self.fc2 = nn.Linear(50, 1)
 
     def forward(self, x):
-        x = x.reshape(-1,1,28,28)
+        x = x.reshape(-1, 1, 28, 28)
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
         x = x.view(-1, 320)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training)
-        #x = self.fc2(x)
-        #return F.log_softmax(x)
         return self.fc2(x)
 
 
@@ -89,7 +86,8 @@ class aipw(nn.Module):
 
 def metric_function_aipw_y(batch, predictions, base):
     t_obs = batch[2]
-    return mean_squared_error(batch[1][t_obs==base], predictions['y'+str(base)].cpu().detach().numpy()[t_obs==base])
+    return mean_squared_error(batch[1][t_obs == base],
+                              predictions['y' + str(base)].cpu().detach().numpy()[t_obs == base])
 
 
 def metric_function_aipw_t(batch, predictions):
@@ -100,7 +98,7 @@ def criterion_function_aipw_y(batch, predictions, device='cpu', base=0):
     y_obs = batch[1].to(device)
     t_obs = batch[2].to(device)
     criterion = nn.MSELoss()
-    return criterion(predictions['y'+str(base)][t_obs==base], y_obs[t_obs==base])
+    return criterion(predictions['y' + str(base)][t_obs == base], y_obs[t_obs == base])
 
 
 def criterion_function_aipw_t(batch, predictions, device='cpu'):
@@ -155,15 +153,10 @@ def fit_aipw(epochs,
              path_logger='',
              config_name='',
              home_dir='',
-             alpha=[2,1,1],
+             alpha=[2, 1, 1],
              use_validation_best=False,
              ):
     logger.debug('...starting')
-
-    # use prefetch_generator and tqdm for iterating through data
-    # pbar = tqdm(enumerate(BackgroundGenerator(train_data_loader, ...)),
-    #            total=len(train_data_loader))
-    # start_time = time.time()
 
     if use_tensorboard:
         writer_tensorboard = ht.TensorboardWriter(path_logger=path_logger,
@@ -203,7 +196,7 @@ def fit_aipw(epochs,
                 batch=batch,
                 predictions=predictions)
 
-            loss_batch = loss_batch_t*alpha[0] + loss_batch_y0*alpha[1] + loss_batch_y1*alpha[2]
+            loss_batch = loss_batch_t * alpha[0] + loss_batch_y0 * alpha[1] + loss_batch_y1 * alpha[2]
             loss_batch.backward()
             optimizer.step()
 
@@ -235,7 +228,7 @@ def fit_aipw(epochs,
                 batch=batch,
                 predictions=predictions)
             if use_validation_best:
-                current_loss = metric_val_t[e]*alpha[0]+ metric_val_y0[e]*alpha[1]+ metric_val_y1[e] *alpha[2]
+                current_loss = metric_val_t[e] * alpha[0] + metric_val_y0[e] * alpha[1] + metric_val_y1[e] * alpha[2]
                 if current_loss < best_loss:
                     best_epoch = e
                     best_loss = current_loss
@@ -244,7 +237,6 @@ def fit_aipw(epochs,
         else:
             loss_val_t[e], loss_val_y0[e], loss_val_y1[e] = None, None, None
             metric_val_t[e], metric_val_y0[e], metric_val_y1[e] = None, None, None
-        #print('checking metric t', metric_val_t[e], metric_train_t[e], e)
         if use_tensorboard:
             values = {'loss_train_t': loss_train_t[e], 'loss_train_y0': loss_train_y0[e],
                       'loss_train_y1': loss_train_y1[e], 'metric_train_t': metric_train_t[e],
@@ -287,8 +279,6 @@ def fit_aipw(epochs,
                'metric_test_y1': metric_test_y1
                }
 
-    # thhold = find_optimal_cutoff_wrapper_t(loader_train=loader_train, model=model, device=device)
-    # metrics['thhold'] = thhold
     model.eval()
     return model, loss, metrics
 
@@ -311,19 +301,14 @@ def fit_aipw_three_opt(epochs,
                        weight_1=1):
     logger.debug('...starting')
 
-    # use prefetch_generator and tqdm for iterating through data
-    # pbar = tqdm(enumerate(BackgroundGenerator(train_data_loader, ...)),
-    #            total=len(train_data_loader))
-    # start_time = time.time()
-
     if use_tensorboard:
         writer_tensorboard = ht.TensorboardWriter(path_logger=path_logger,
                                                   config_name=config_name,
                                                   home_dir=home_dir)
 
-    alpha=[1,0,0]
+    alpha = [1, 0, 0]
     optimizer_t = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.9)
-    model = _freeze_layers(model,alpha)
+    model = _freeze_layers(model, alpha)
 
     model, loss_train_t, loss_val_t, metric_train_t, metric_val_t = epoch_opt(model=model,
                                                                               epochs=epochs,
@@ -335,8 +320,8 @@ def fit_aipw_three_opt(epochs,
                                                                               metric_functions=metric_functions,
                                                                               use_validation=use_validation,
                                                                               alpha=alpha)
-    alpha=[0, 1,0]
-    model = _freeze_layers(model,alpha)
+    alpha = [0, 1, 0]
+    model = _freeze_layers(model, alpha)
     model, loss_train_y0, loss_val_y0, metric_train_y0, metric_val_y0 = epoch_opt(model=model,
                                                                                   epochs=epochs,
                                                                                   loader_train=loader_train,
@@ -463,10 +448,10 @@ def _freeze_layers(model, alpha):
     to_freeze = []
     for i, item in enumerate(alpha):
         if item == 1:
-            to_unfreeze = [layers[i]+'.linear.weight', layers[i]+'.linear.bias']
+            to_unfreeze = [layers[i] + '.linear.weight', layers[i] + '.linear.bias']
         else:
-            to_freeze.append(layers[i]+'.linear.weight')
-            to_freeze.append(layers[i]+'.linear.bias')
+            to_freeze.append(layers[i] + '.linear.weight')
+            to_freeze.append(layers[i] + '.linear.bias')
 
     print('alpha and unfreeze and freeze', alpha, to_unfreeze, to_freeze)
 
@@ -477,5 +462,5 @@ def _freeze_layers(model, alpha):
             print('Frooze')
         else:
             layer.require_grad = True
-            print( 'Not frooze')
+            print('Not frooze')
     return model

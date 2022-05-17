@@ -84,7 +84,7 @@ def _check_params_consistency(params):
     params['source_size_p'] = params.get('source_size_p', 0.2)
     params['use_tensorboard'] = params.get('use_tensorboard', False)
     params['use_validation'] = params.get('use_validation', False)
-    params['use_validation_best'] = params.get('use_validation_best', False)  # TODO: change to false?
+    params['use_validation_best'] = params.get('use_validation_best', False)
     if params['use_validation_best']:
         assert params['use_validation_best'] == params['use_validation'], 'use_validation_best without use_validation'
 
@@ -109,12 +109,12 @@ def _check_params_consistency(params):
         params['n_sample'] = params.get('n_sample', 747)
         params['is_Image'] = False
     elif params['data_name'] == 'hcmnist':
-        params['is_Image'] = True
+        params['is_Image'] = params.get('is_Image', True)
         params['use_data_x_source'] = False
         params['use_fix_digit'] = params.get('use_fix_digit', True)
         params['target_size'] = params.get('target_size', 1000)
         params['source_size'] = params.get('source_size', 1000)
-        params['use_source'] = params.get('use_source',False)
+        params['use_source'] = params.get('use_source', False)
     else:
         logger.debug('%s not implemented', params['data_name'])
 

@@ -12,3 +12,6 @@ tensorflow_probability
 pyyaml
 tqdm
 keras
+CEVAE_pytorch
+quince
+CompBioAndSimulated_Datasets

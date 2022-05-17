@@ -1,6 +1,6 @@
 # Causal-BaTLe
 
-Author: Raquel Aoki
+Author: 
 
 ## Introduction
 This repository contains software and data for "Causal inference from small high-dimensional datasets".
@@ -108,85 +108,8 @@ We have 4 unit tests implemented that check the main functions implemented.
 !python -m unit_test
 ```
 
-To run the unit tests in Colab, we use: 
-```shell
-!git clone https://github.com/raquelaoki/CompBioAndSimulated_Datasets.git
-!git clone -b in_progress https://github.com/raquelaoki/causal-batle.git
-!mv  -v /content/causal-batle/* /content/
-!python -m unit_test
-```
-
-
 ## References
-* baselines https://github.com/oatml/ucate (bayesian NN + uncertainty) and https://github.com/anndvision/quince (with bounds)
-* drgonnet https://github.com/claudiashi57/dragonnet/blob/master/src/experiment/models.py
-* add gwas
-* add bayesian layers 
-* IN CONSTRUCTION
+* Bayesian Layers: https://github.com/oatml/ucate (bayesian NN + uncertainty) and https://github.com/anndvision/quince (with bounds)
+* Dragonnet https://github.com/claudiashi57/dragonnet/blob/master/src/experiment/models.py
 * CEVAE: https://github.com/rik-helwegen/CEVAE_pytorch/
-
-## Compute Canada Instructions (not used)
-
-* Source code and data: /home/raoki/projects/rrg-ester/raoki/batle
-* Env and checkpoints: /home/raoki/scratch/
-* https://www.notion.so/Compute-Canada-Wiki-Ester-Lab-869c7e3b51b54fb39970e0fbd7b8af3f 
-
-#### Virtualenv 
-
-```commandline
-module load python/3.9
-
-virtualenv --no-download env
-
-# Activate virtualenv from scratch:
-source env/bin/activate
-
-# Activate virtualenv from rrg-ester
-source ~/scratch/env/bin/activate
-
-# Deactivate virtualenv 
-deactivate
-
-# Initial install (or new packages)
-pip install --no-index -r requirements.txt
-```
-
-#### Interactive Session
-
-Setting up jupyter notebook
-```commandline
-# For interactive jupyter notebook:
-echo -e '#!/bin/bash\nunset XDG_RUNTIME_DIR\njupyter notebook --ip $(hostname -f) --no-browser' > $VIRTUAL_ENV/bin/notebook.sh
-chmod u+x $VIRTUAL_ENV/bin/notebook.sh
-jupyter nbextension install --py jupyterlmod --sys-prefix #dont work
-jupyter nbextension enable --py jupyterlmod --sys-prefix
-jupyter serverextension enable --py jupyterlmod --sys-prefix
-```
-
-Request Session - Compute Canada
-```commandline
-source ~/scratch/env/bin/activate
-
-# CPU
-salloc --time=1:0:0  --cpus-per-task=1 --mem=4000M --account=rrg-ester srun $VIRTUAL_ENV/bin/notebook.sh
-
-# GPU
-salloc --time=1:0:0 --gres=gpu:1 --ntasks=1 --cpus-per-task=1 --mem=4000M --account=rrg-ester srun $VIRTUAL_ENV/bin/notebook.sh
-```
-
-Local Machine
-```commandline
-ssh -L 8888:cdr767.int.cedar.computecanada.ca:8888 USER@cedar.computecanada.ca
-```
-
-Tensorboard 
-```commandline
-# Load the TensorBoard notebook extension
-%load_ext tensorboard
-%tensorboard --logdir logs
-```
-
-## TODO:
-1) add test for new dataset
-
-
+* HCMNIST: quince/library/datasets/

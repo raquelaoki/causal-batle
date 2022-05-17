@@ -1,3 +1,9 @@
+"""
+References:
+    # https://pytorch.org/vision/stable/datasets.html
+    quince/library/datasets/
+"""
+
 import logging
 import numpy as np
 import torch
@@ -346,27 +352,22 @@ class HCMNIST(datasets.MNIST):
             if use_fix_digit:
                 mask_source = np.in1d(self.targets.numpy(), digits[-1])  #  Last Digit as source-domain.
                 self.x_s = self.data[mask_source]
-               # self.target_s = self.targets[mask_source]
             else:
                 mask_source = np.in1d(self.targets.numpy(), digits[2:])  #  Any other digit can be used.
                 self.x_s = self.data[mask_source]
-                #self.target_s = self.targets[mask_source]
 
             # Fixing sample size as source_size
             source_samples = list(range(self.x_s.shape[0]))
             np.random.shuffle(source_samples)
             source_samples_selection = source_samples[0:source_size]
             self.x_s = self.x_s[source_samples_selection]
-            #self.target_s = self.target_s[source_samples_selection]
         else:
             self.x_s = None
 
 
     def _fit_phi_model(self, domain=2):
-
         # Reference: quince/library/datasets/utils.py
         edges = torch.arange(-domain, domain + 0.1, (2 * domain) / 10)
-        # data = (data.float().div(255) - 0.1307).div(0.3081).view(data.shape[0], -1)
         data = self.x_t.view(self.x_t.shape[0], -1)
         model = {}
         digits = torch.unique(self.target_t)

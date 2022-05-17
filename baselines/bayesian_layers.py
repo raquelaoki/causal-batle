@@ -1,4 +1,5 @@
 """
+Reference:
 https://github.com/anndvision/quince/blob/main/quince/library/modules/variational.py
 """
 import numpy as np
@@ -13,7 +14,6 @@ class Normal(nn.Module):
         super(Normal, self).__init__()
         self.mu = nn.Linear(in_features=in_features, out_features=out_features, bias=True, )
         self.sigma = nn.Linear(in_features=in_features, out_features=out_features, bias=True)
-        #self.threshold = nn.Threshold(0.000001, 0.000001)
         self.softplus = nn.Softplus()
 
     def forward(self, inputs):
@@ -27,7 +27,6 @@ class Categorical(nn.Module):
         self.logits = nn.Linear(in_features=in_features, out_features=out_features, bias=True, )
         self.distribution = distributions.Bernoulli
         self.in_features = in_features
-        # self.distribution = (distributions.Bernoulli if out_features == 1 else distributions.Categorical)
 
     def forward(self, inputs):
         return self.distribution(logits=self.logits(inputs))

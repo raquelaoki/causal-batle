@@ -12,7 +12,6 @@ import baselines.cevae as cevae
 import causal_batle as cb
 import helper_ate as ha
 
-# logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -155,7 +154,7 @@ def fit_wrapper(params,
                                  )
     alpha = params['alpha']
 
-    params['config_name_seeds'] = params.get('config_name_seeds',params['config_name']+str(params['seed']))
+    params['config_name_seeds'] = params.get('config_name_seeds', params['config_name'] + str(params['seed']))
 
     model, loss, metrics = fit(epochs=params['max_epochs'],
                                model=model,

@@ -305,7 +305,6 @@ def fit_causal_batle(epochs,
         metric_train_y[e] = np.nanmean(_metrics_y)
         metric_train_d[e] = np.nanmean(_metrics_d)
         metric_train_r[e] = np.nanmean(_metrics_r)
-        #print('epoch  ', e, ' =',metric_train_t[e], metric_train_y[e])
         if use_validation:
             lm_val = _calculate_loss_metric_noopti(model=model, loader=loader_val, device=device,
                                                    criterion=criterion, metric_functions=metric_functions)

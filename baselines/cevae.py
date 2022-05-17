@@ -1,11 +1,10 @@
 """ CEVAE
 
-We adaopted the existing implementation available in rik-helwegen/CEVAE_pytorch.
+We adapted the existing implementation available in rik-helwegen/CEVAE_pytorch.
 We used the implemented model, and modified the training setup.
 
 Reference:
 https://github.com/rik-helwegen/CEVAE_pytorch
-# TODO: add paper
 """
 import logging
 import numpy as np
@@ -20,13 +19,6 @@ import helper_tensorboard as ht
 from CEVAE_pytorch.networks import p_x_z, p_t_z, p_y_zt, q_t_x, q_y_xt, q_z_tyx
 
 logger = logging.getLogger(__name__)
-
-"""
-# set evaluator objects
-    evaluator_train = Evaluator(yalltr, talltr, y_cf=np.concatenate([y_cftr, y_cfva], axis=0),
-                                mu0=np.concatenate([mu0tr, mu0va], axis=0), mu1=np.concatenate([mu1tr, mu1va], axis=0))
-    evaluator_test = Evaluator(yte, tte, y_cf=y_cfte, mu0=mu0te, mu1=mu1te)
-"""
 
 
 class cevae:
@@ -219,11 +211,6 @@ def fit_cevae(epochs,
 
     # init q_z inference
     model.q_z_tyx_dist = init_qz(model.q_z_tyx_dist, loader_train, device=device)
-
-    # use prefetch_generator and tqdm for iterating through data
-    # pbar = tqdm(enumerate(BackgroundGenerator(train_data_loader, ...)),
-    #            total=len(train_data_loader))
-    # start_time = time.time()
 
     if use_tensorboard:
         writer_tensorboard = ht.TensorboardWriter(path_logger=path_logger,
