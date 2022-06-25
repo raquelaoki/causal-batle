@@ -1,0 +1,17 @@
+parameters:
+    data_name: 'hcmnist'
+    model_name: 'aipw'
+    config_name: 'hcmnist_aipw'
+    ate_method_list: ['naive','aipw']
+    n_covariates: 1
+    repetitions: 25
+    seed: 4
+    max_epochs: 100
+    batch_size: 128
+    lr: 0.01
+    weight_decay: 0.05
+    use_validation: True
+    use_validation_best: True
+    use_tensorboard: False
+    source_size_p: 1
+    use_source_dig: True

@@ -1,0 +1,18 @@
+parameters:
+    data_name: 'gwas'
+    model_name: 'cevae'
+    config_name: 'gwas_cevae'
+    ate_method_list: [ 'naive','aipw' ]
+    n_covariates: 10000
+    n_sample: 2000
+    repetitions: 25
+    seed: 4
+    max_epochs: 100
+    batch_size: 100
+    lr: 0.001
+    weight_decay: 0.05
+    alpha: [1]
+    use_validation: True
+    use_validation_best: True
+    use_dropout: False
+    use_tensorboard: False
