@@ -122,12 +122,12 @@ def _check_params_consistency(params):
         params['units1'] = params.get('units1', 200)
         params['units2'] = params.get('units2', 100)
         params['units3'] = params.get('units3', 1)
-        params['alpha'] = params.get('alpha', [1, 1, 0])
+        params['alpha'] = params.get('alpha', [1, 1, 1])
     elif params['model_name'] == 'bdragonnet':
         params['units1'] = params.get('units1', 200)
         params['units2'] = params.get('units2', 100)
         params['units3'] = params.get('units3', 1)
-        params['alpha'] = params.get('alpha', [1, 1, 0])
+        params['alpha'] = params.get('alpha', [1, 1, 1])
         params['use_dropout'] = True
         params['type_original'] = False
         assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
@@ -175,8 +175,10 @@ def parameter_debug(data_name='gwas', model_name='dragonnet', max_epochs=100,
     Function for testing, creates params dictionary withouh the yaml files.
     """
 
-    params = {'data_name': data_name, 'model_name': model_name,
-              'seed': seed, 'config_name': config_name,
+    params = {'data_name': data_name,
+              'model_name': model_name,
+              'seed': seed,
+              'config_name': config_name,
               'use_tensorboard': use_tensorboard,
               'ate_method_list': ate_method_list,
               'repetitions': repetitions,

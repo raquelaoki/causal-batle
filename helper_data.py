@@ -187,15 +187,15 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
         logger.debug('... using only target domain data.')
         if source_size < 1:
             #  Only a proportion of the data in source is used (GWAS and IHDP)
-            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t,
-                                                        random_state=seed + 3 + seed_add_on,
+            s_x, target_x, _, target_y, _, target_t = train_test_split(data_x, data_y, data_t,
+                                                        random_state=seed + seed_add_on,
                                                         test_size=source_size)
-            t_x = t_x.values
+            target_x = target_x.values
             np.random.seed(seed + seed_add_on)
-            permutation = np.random.permutation(len(t_y))
-            t_x = t_x[permutation]
-            t_t = t_t[permutation]
-            t_y = t_y[permutation]
+            permutation = np.random.permutation(len(target_y))
+            t_x = target_x[permutation]
+            t_t = target_t[permutation]
+            t_y = target_y[permutation]
             data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size,
                               binfeat=binfeat, contfeat=contfeat)
         else:
@@ -272,7 +272,7 @@ def make_ihdp(params):
                           seed=seed,
                           source_size=params['source_size_p'],
                           use_validation=params['use_validation'],
-                          use_source=params['use_validation'],
+                          use_source=params['use_source'],
                           binfeat=list(range(6, 25)),
                           contfeat=list(range(6)),
                           seed_add_on=params['seed_add_on'],
