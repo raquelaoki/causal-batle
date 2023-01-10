@@ -31,29 +31,45 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
     if is_Image:
         table['range_size'] = [str(round(item)) for item in table['range_size']]
 
+        # ratios = {
+        #     '250': '(' + str(round(250 / 1000, 2)) + ')',
+        #     '500': '(' + str(round(500 / 1000, 2)) + ')',
+        #     '750': '(' + str(round(750 / 1000, 2)) + ')',
+        #     '1000': '(' + str(round(1000 / 1000, 2)) + ')',
+        # }
         ratios = {
-            '250': '(' + str(round(250 / 1000, 2)) + ')',
-            '500': '(' + str(round(500 / 1000, 2)) + ')',
-            '750': '(' + str(round(750 / 1000, 2)) + ')',
-            '1000': '(' + str(round(1000 / 1000, 2)) + ')',
+            '250': str(round(250 / 1000, 2)),
+            '500': str(round(500 / 1000, 2)),
+            '750': str(round(750 / 1000, 2)),
+            '1000': str(round(1000 / 1000, 2)),
         }
-        table['range_size'] = [item + ratios[item] for item in table['range_size']]
+        table['range_size'] = [ratios[item] for item in table['range_size']]
+        #table['range_size'] = [item + ratios[item] for item in table['range_size']]
         table.range_size = table.range_size.astype('category')
-        table.range_size.cat.set_categories(['250(0.25)', '500(0.5)', '750(0.75)', '1000(1.0)'], inplace=True)
+        #table.range_size.cat.set_categories(['250(0.25)', '500(0.5)', '750(0.75)', '1000(1.0)'], inplace=True)
+        table.range_size.cat.set_categories(['0.25', '0.5', '0.75', '1.0'], inplace=True)
         table_stats = table[['model_name', 'range_size', 'mae_naive', 'mae_aipw']]
         print(table_stats.groupby(['model_name', 'range_size']).mean())
         return table
     else:
         table['source_size_p'] = table['source_size_p'] * 100
         table['source_size_p'] = [str(round(item)) + '%' for item in table['source_size_p']]
+        # ratios = {
+        #     '20%': '(' + str(0.25) + ')',
+        #     '40%': '(' + str(0.67) + ')',
+        #     '60%': '(' + str(1.5) + ')',
+        #     '80%': '(' + str(4) + ')',
+        #     '100%': '-',
+        # }
         ratios = {
-            '20%': '(' + str(0.25) + ')',
-            '40%': '(' + str(0.67) + ')',
-            '60%': '(' + str(1.5) + ')',
-            '80%': '(' + str(4) + ')',
+            '20%':  str(0.25),
+            '40%':  str(0.67),
+            '60%':  str(1.5),
+            '80%':  str(4),
             '100%': '-',
         }
-        table['source_size_p'] = [item + ratios[item] for item in table['source_size_p']]
+        #table['source_size_p'] = [item + ratios[item] for item in table['source_size_p']]
+        table['source_size_p'] = [ratios[item] for item in table['source_size_p']]
         table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
         print(table_stats.groupby(['model_name', 'source_size_p']).mean())
         return table
@@ -107,7 +123,7 @@ def single_barplot(table, metric_name, metric_name_ylabel, title,
     ax.set_ylabel(metric_name_ylabel, fontsize=fontsize)
     ax.set_title(title, fontsize=fontsize)
     if save_plot:
-        plt.savefig(data_name + '_single_plot.png', dpi=300, bbox_inches='tight')
+        plt.savefig(data_name + '_single_plot.png', dpi=600, bbox_inches='tight')
     return ax
 
 
@@ -145,7 +161,7 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
     ax.legend(ncol=ncol_legend, loc='upper right', fontsize=fontsize)
     ax.xaxis.get_label().set_fontsize(fontsize)
     if save_plot:
-        plt.savefig(data_name + '_' + title + '.png', dpi=300, bbox_inches='tight')
+        plt.savefig(data_name + '_' + title + '.png', dpi=600, bbox_inches='tight')
     return ax
 
 
@@ -172,7 +188,7 @@ def plot_around_treat(table, seed, metric_name, labely_name, methods_order, ax=N
     ax.set_ylabel(labely_name + '(τ=' + str(tau) + ')', fontsize=fontsize)
     ax.set_xlabel('Dataset Replication ' + str(seed), fontsize=fontsize)
     if save_plot:
-        plt.savefig(data_name + '_' + title + str(seed) + '.png', dpi=300, bbox_inches='tight')
+        plt.savefig(data_name + '_' + title + str(seed) + '.png', dpi=600, bbox_inches='tight')
     return ax
 
 
@@ -206,6 +222,6 @@ def plot_around_treat_colors(table, seed, metric_name, labely_name, hue,
     ax.set_xlabel('Dataset Replication ' + str(seed), fontsize=fontsize)
 
     if save_plot:
-        plt.savefig(data_name + '_colors_' + title + str(seed) + '.png', dpi=300, bbox_inches='tight')
+        plt.savefig(data_name + '_colors_' + title + str(seed) + '.png', dpi=600, bbox_inches='tight')
     return ax
 
