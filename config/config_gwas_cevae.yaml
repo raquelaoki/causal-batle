@@ -11,7 +11,6 @@ parameters:
     batch_size: 100
     lr: 0.001
     weight_decay: 0.05
-    alpha: [1]
     use_validation: True
     use_validation_best: True
     use_dropout: False

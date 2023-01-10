@@ -13,5 +13,3 @@ parameters:
     weight_decay: 0.05
     use_validation: True
     use_validation_best: True
-    use_tensorboard: False
-    alpha: [4,1,1]
