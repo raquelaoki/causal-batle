@@ -1,0 +1,17 @@
+scipy
+pandas
+numpy
+matplotlib
+scikit_learn
+seaborn
+statsmodels
+jupyterlmod
+torch
+tensorflow
+tensorflow_probability
+pyyaml
+tqdm
+keras
+CEVAE_pytorch
+quince
+CompBioAndSimulated_Datasets
