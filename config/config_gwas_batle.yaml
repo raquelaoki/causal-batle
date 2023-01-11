@@ -1,7 +1,7 @@
 parameters:
     data_name: 'gwas'
     model_name: 'batle'
-    config_name: 'gwas_batle'
+    config_name: 'gwas_batle_info'
     ate_method_list: ['naive']
     n_covariates: 10000
     n_sample: 2000
@@ -20,3 +20,4 @@ parameters:
     use_tensorboard: True
     use_source: True
     forward_passes: 30
+    informative_source: True

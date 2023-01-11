@@ -1,7 +1,7 @@
 parameters:
     data_name: 'hcmnist'
     model_name: 'batle'
-    config_name: 'hcmnist_batle'
+    config_name: 'hcmnist_batle_info'
     ate_method_list: ['naive']
     n_covariates: 0
     repetitions: 5
@@ -22,3 +22,4 @@ parameters:
     source_size_p: 1
     use_fix_digit: False
     source_size: 2000
+    informative_source: True

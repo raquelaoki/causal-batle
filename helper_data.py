@@ -151,6 +151,7 @@ def make_DataClass(data_x, data_t, data_y,
                    data_x_source=None, seed=1, source_size=0.2, test_size=0.33,
                    use_validation=False, use_source=False, binfeat=[], contfeat=[], use_data_x_source=False,
                    seed_add_on=0,
+                   informative_source=True,
                    ):
     """ It creates the data classes (DataTarget or DataTargetAndSource) from input data data_x, data_t, data_y.
     VALID ONLY FOR GWAS AND IHDP.
@@ -180,6 +181,15 @@ def make_DataClass(data_x, data_t, data_y,
         else:
             s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed + seed_add_on,
                                                         test_size=source_size)
+
+        if not informative_source:
+            print("original size", s_x)
+            full = s_x.reshape(-1,1)
+            permutation = np.random.permutation(len(full))
+            s_x = full[permutation]
+            s_x = s_x.reshape(-1, t_x.shape[1])
+            print("new size (after permutation)", s_x)
+
 
         n_source = s_x.shape[0]
         n_target = t_x.shape[0]
@@ -273,6 +283,7 @@ def make_gwas(params, unit_test=False):
                           binfeat=[],
                           contfeat=list(range(data_x.shape[1])),
                           seed_add_on=params['seed_add_on'],
+                          informative_source=params['informative_source'],
                           )
     return data, tau[0]  # treatment_effects[treatment_columns]
 

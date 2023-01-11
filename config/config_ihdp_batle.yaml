@@ -1,7 +1,7 @@
 parameters:
     data_name: 'ihdp'
     model_name: 'batle'
-    config_name: 'ihdp_batle'
+    config_name: 'ihdp_batle_info'
     ate_method_list: ['naive']
     repetitions: 5
     seed: 9
@@ -18,3 +18,4 @@ parameters:
     use_tensorboard: False
     use_source: True
     forward_passes: 30
+    informative_source: True

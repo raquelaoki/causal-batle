@@ -81,6 +81,7 @@ def _check_params_consistency(params):
     params['use_dropout'] = params.get('use_dropout', False)
     params['dropout_p'] = params.get('dropout_p', 0.5)
     params['use_source'] = params.get('use_source', False)
+    params['informative_source'] = params.get('informative_source', True)
     params['source_size_p'] = params.get('source_size_p', 0.2)
     params['use_tensorboard'] = params.get('use_tensorboard', False)
     params['use_validation'] = params.get('use_validation', False)
