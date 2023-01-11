@@ -17,10 +17,13 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
                          is_Image=False):
     files = os.listdir(path)
     files = [os.path.join(path, f) for f in files]
-    table = pd.DataFrame()
+    table = []
     for f in files:
         _table = pd.read_csv(f, index_col=[0])
-        table = pd.concat([table, _table])
+        if 'mae_naive' not in _table.columns:
+            _table['mae_naive'] = [np.abs(_table['tau'][i] - _table['ate_naive_all'][i]) for i in range(_table.shape[0])]
+        table.append(_table)
+    table = pd.concat(table, axis=0)
     new_names = {'batle': 'C-Batle',
                  'dragonnet': 'Drag.',
                  'bdragonnet': 'B-Drag.',
@@ -28,9 +31,6 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
                  'aipw': 'AIPW'}
 
     table['model_name'] = [new_names[item] for item in table['model_name']]
-
-    if 'mae_naive' not in table.columns:
-        table['mae_naive'] = [np.abs(table['tau'][i] - table['ate_naive_all'][i]) for i in range(table.shape[0])]
 
 
     if is_Image:

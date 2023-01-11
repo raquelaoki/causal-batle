@@ -154,6 +154,7 @@ def _check_params_consistency(params):
         assert params['forward_passes'] > 0, 'forward_passes missing or incorrect'
     elif params['model_name'] == 'cevae':
         params['use_source'] = False
+        params['alpha'] = params.get('alpha', [1, 1, 1, 1, 1, 1])
     else:
         logger.debug('%s not implemented', params['model_name'])
 

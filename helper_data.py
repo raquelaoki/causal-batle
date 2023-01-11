@@ -24,8 +24,12 @@ logger = logging.getLogger(__name__)
 
 
 class DataTargetAndSource:
-    def __init__(self, x, t, y, d, test_size=0.33, seed=0, use_validation=False, binfeat=[], contfeat=[]):
+    def __init__(self, x, t, y, d, test_size=0.33, seed=0, use_validation=False, binfeat=[], contfeat=[],
+                 full_size_n=-1, target_size_n=-1, source_size_n=-1,
+                 ):
         self.use_validation = use_validation
+        self.size = x.shape[0]
+        self.target = d.sum()
         x_train, x_test, y_train, y_test, t_train, t_test, d_train, d_test = train_test_split(x, y, t, d,
                                                                                               test_size=test_size,
                                                                                               random_state=seed)
@@ -57,6 +61,10 @@ class DataTargetAndSource:
         self.binfeat = binfeat
         self.contfeat = contfeat
 
+        self.full_size_n = full_size_n
+        self.target_size_n = target_size_n
+        self.source_size_n = source_size_n
+
     def loader(self, batch=32):
         # Creating TensorDataset to use in the DataLoader.
         dataset_train = TensorDataset(Tensor(self.x_train), Tensor(self.y_train),
@@ -85,9 +93,16 @@ class DataTargetAndSource:
 
 
 class DataTarget:
-    def __init__(self, x, t, y, test_size=0.33, seed=0, use_validation=False, binfeat=[], contfeat=[]):
+    def __init__(self, x, t, y, test_size=0.33, seed=0, use_validation=False, binfeat=[], contfeat=[],
+                 full_size_n=-1, target_size_n=-1, source_size_n=-1,
+                 ):
         super(DataTarget, self).__init__()
         self.use_validation = use_validation
+        self.target = x.shape[0]
+
+        self.full_size_n = full_size_n
+        self.target_size_n = target_size_n
+        self.source_size_n = source_size_n
 
         x_train, x_test, y_train, y_test, t_train, t_test = train_test_split(x, y, t,
                                                                              test_size=test_size,
@@ -181,7 +196,8 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
         d = d[permutation]
 
         data = DataTargetAndSource(x=x, t=t, y=y, d=d, use_validation=use_validation,
-                                   test_size=test_size, binfeat=binfeat, contfeat=contfeat
+                                   test_size=test_size, binfeat=binfeat, contfeat=contfeat,
+                                   full_size_n=data_x.shape[0], target_size_n=n_target, source_size_n=n_source,
                                    )
     else:
         logger.debug('... using only target domain data.')
@@ -201,7 +217,9 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
         else:
             #  All the data in source is used (HCMNIST)
             data = DataTarget(x=data_x, t=data_t, y=data_y, use_validation=use_validation, test_size=test_size,
-                              binfeat=binfeat, contfeat=contfeat)
+                              binfeat=binfeat, contfeat=contfeat,
+                              full_size_n=data_x.shape[0], target_size_n=target_x.shape[0], source_size_n=-1,
+                              )
     return data
 
 
