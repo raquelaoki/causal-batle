@@ -28,7 +28,7 @@ def make_data(params):
         raise NotImplementedError(params['data_name'])
 
 
-def run_model(params, model_seed=0, good_runs=0):
+def run_model(params, model_seed=0, good_runs=0, data_counter=0):
     """ Given a set of parameters, it run the model.
     1. Creates the dataset (use seed for stability/reproducibility across several models).
     2. Make data loaders.
@@ -41,15 +41,13 @@ def run_model(params, model_seed=0, good_runs=0):
     success = False
     while not success:
         try:
+            params['data_seed'] = data_counter
             data, tau = make_data(params)
             tloader_train, tloader_val, tloader_test, tloader_all = data.loader(batch=params['batch_size'])
-            # params['target_domain_samples'] = data.shape[0]
-            # params['full_samples'] = tloader_all.__len__
+
             params['full_size_n'] = data.full_size_n
             params['target_size_n'] = data.target_size_n
             params['source_size_n'] = data.source_size_n
-
-            print('I got the params here', params)
 
             metrics, loss, ate = hfit.fit_wrapper(params=params,
                                                   loader_train=tloader_train,
@@ -70,7 +68,7 @@ def run_model(params, model_seed=0, good_runs=0):
             print('...value error (good runs before - ', good_runs, ')')
             good_runs = 0
 
-    return metrics, loss, ate, tau, good_runs, params
+    return metrics, loss, ate, tau, good_runs, params, data_counter+1
 
 
 def organize(params, ate, tau, table=pd.DataFrame(), b=1):
@@ -89,6 +87,7 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
                'epochs', 'alpha', 'lr', 'wd', 'x_t_shape', 'x_s_shape',
                'batch', 'dropout', 'repetitions', 'data_rep', 'range_size',
                'full_size_n', 'target_size_n', 'source_size_n',
+               'data_seed',
                ]
 
     if table.empty:
@@ -133,6 +132,7 @@ def organize(params, ate, tau, table=pd.DataFrame(), b=1):
         'full_size_n': params.get('full_size_n', -1),
         'target_size_n': params.get('target_size_n', -1),
         'source_size_n': params.get('source_size_n', -1),
+        'data_seed': params.get('data_seed', -1)
     }
     table = table.append(out, ignore_index=True)
     return table[columns]
@@ -173,19 +173,27 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
         logger.debug('seed ' + str(seed))
         config_name = params['config_name']
         good_runs = 0
+        data_counter = 0
         for i in range(b):
             if use_range_source_p:
-                table, good_runs = range_source_p(params=params,
+                table, good_runs, data_counter = range_source_p(params=params,
                                                   table=table,
                                                   b=i,
                                                   good_runs=good_runs,
                                                   source_size_p=source_size_p,
-                                                  target_size=target_size)
+                                                  target_size=target_size,
+                                                  data_counter=data_counter
+                                                  )
             else:
+
                 params['config_name_seeds'] = config_name + '_' + 'seed' + str(
                     params['seed']) + '_' + 'b' + str(i)
                 print(params['config_name_seeds'])
-                metrics, loss, ate, tau, good_runs, params = run_model(params, model_seed=i, good_runs=good_runs)
+                metrics, loss, ate, tau, good_runs, params, data_counter = run_model(params,
+                                                                                     model_seed=i,
+                                                                                     good_runs=good_runs,
+                                                                                     data_counter=data_counter)
+                params['data_seed'] = data_counter
                 table = organize(params, ate, tau, table, b=i)
         table['data_rep'] = n_seeds
         if save:
@@ -195,7 +203,7 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
     return table
 
 
-def range_source_p(params, table, source_size_p=None, b=1, good_runs=0, target_size=None):
+def range_source_p(params, table, source_size_p=None, b=1, good_runs=0, target_size=None, data_counter=0):
     """ Creates a range of experiments with same set of parameters, but different source_size_p.
     source_size_p: proportion of input data splited between target and source domain.
     Note 1: that this only makes sense on the GWAS and IHDP datasets, where we are artificially spliting the dataset
@@ -220,6 +228,8 @@ def range_source_p(params, table, source_size_p=None, b=1, good_runs=0, target_s
             range_sizes = source_size_p
 
     config_name = params['config_name']
+
+
     for p in range_sizes:
         params['config_name'] = config_name + '_' + str(p) + '_' + 'seed' + str(params['seed']) + '_' + 'b' + str(b)
         if params['data_name'] == 'hcmnist':
@@ -227,8 +237,12 @@ def range_source_p(params, table, source_size_p=None, b=1, good_runs=0, target_s
         else:
             params['source_size_p'] = p
         params['config_name_seeds'] = params['config_name']
-        metrics, loss, ate, tau, good_runs, params = run_model(params, model_seed=b, good_runs=good_runs)
+        metrics, loss, ate, tau, good_runs, params, data_counter = run_model(params,
+                                                                  model_seed=b,
+                                                                  good_runs=good_runs,
+                                                                  data_counter=data_counter)
+        params['data_seed'] = data_counter
         table = organize(params, ate, tau, table, b=b)
 
     params['config_name'] = config_name
-    return table, good_runs
+    return table, good_runs, data_counter

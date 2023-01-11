@@ -103,7 +103,6 @@ class DataTarget:
         self.full_size_n = full_size_n
         self.target_size_n = target_size_n
         self.source_size_n = source_size_n
-
         x_train, x_test, y_train, y_test, t_train, t_test = train_test_split(x, y, t,
                                                                              test_size=test_size,
                                                                              random_state=seed + 100)
@@ -148,9 +147,11 @@ class DataTarget:
         return loader_train, loader_val, loader_test, loader_all
 
 
-def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_size=0.2, test_size=0.33,
-                   use_validation=False, use_source=False, binfeat=[], contfeat=[], seed_add_on=0,
-                   use_data_x_source=False):
+def make_DataClass(data_x, data_t, data_y,
+                   data_x_source=None, seed=1, source_size=0.2, test_size=0.33,
+                   use_validation=False, use_source=False, binfeat=[], contfeat=[], use_data_x_source=False,
+                   seed_add_on=0,
+                   ):
     """ It creates the data classes (DataTarget or DataTargetAndSource) from input data data_x, data_t, data_y.
     VALID ONLY FOR GWAS AND IHDP.
     It will alwyas split the dataset using source_size, even it the method only uses the target data
@@ -177,7 +178,7 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
             s_x = data_x_source
             t_x, t_y, t_t = data_x, data_y, data_t
         else:
-            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed + 3 + seed_add_on,
+            s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed + seed_add_on,
                                                         test_size=source_size)
 
         n_source = s_x.shape[0]
@@ -213,7 +214,9 @@ def make_DataClass(data_x, data_t, data_y, data_x_source=None, seed=1, source_si
             t_t = target_t[permutation]
             t_y = target_y[permutation]
             data = DataTarget(x=t_x, t=t_t, y=t_y, use_validation=use_validation, test_size=test_size,
-                              binfeat=binfeat, contfeat=contfeat)
+                              binfeat=binfeat, contfeat=contfeat,
+                              full_size_n=data_x.shape[0], target_size_n=target_x.shape[0], source_size_n=-1,
+                              )
         else:
             #  All the data in source is used (HCMNIST)
             data = DataTarget(x=data_x, t=data_t, y=data_y, use_validation=use_validation, test_size=test_size,
@@ -238,7 +241,7 @@ def make_gwas(params, unit_test=False):
     _key = {'n_sample': 10000, 'n_covariates': 1000, 'n_treatments': 1, 'use_validation': False,
             'use_overlap_knob': False, 'overlap_knob': 1, 'seed': 1}
     params = hp.create_if_not_available(params, _key)
-    seed = params['seed']
+    seed = params['data_seed']
     prop = 1 / params['n_covariates']
     data_setting = bcdata.gwas_simulated_data(prop_tc=prop,  # proportion ot true causes
                                               pca_path='CompBioAndSimulated_Datasets/data/tgp_pca2.txt',
@@ -263,13 +266,13 @@ def make_gwas(params, unit_test=False):
     data = make_DataClass(data_x=data_x,
                           data_y=data_y,
                           data_t=data_t,
-                          seed=seed,
+                          seed=params['data_seed'],
                           source_size=params['source_size_p'],
                           use_validation=params['use_validation'],
                           use_source=params['use_source'],
                           binfeat=[],
                           contfeat=list(range(data_x.shape[1])),
-                          seed_add_on=params['seed_add_on']
+                          seed_add_on=params['seed_add_on'],
                           )
     return data, tau[0]  # treatment_effects[treatment_columns]
 
@@ -287,7 +290,7 @@ def make_ihdp(params):
     data = make_DataClass(data_x=data_x,
                           data_y=data_y,
                           data_t=data_t,
-                          seed=seed,
+                          seed=params['data_seed'],
                           source_size=params['source_size_p'],
                           use_validation=params['use_validation'],
                           use_source=params['use_source'],
@@ -300,8 +303,8 @@ def make_ihdp(params):
 
 
 def make_hcmnist(params):
-    seed = params['seed']
-    data_setting = HCMNIST('', download=True, seed=seed,
+    #seed = params['seed']
+    data_setting = HCMNIST('', download=True, seed=params['data_seed'],
                            use_fix_digit=params['use_fix_digit'],
                            target_size=params['target_size'],
                            use_source=params['use_source'],
@@ -311,14 +314,14 @@ def make_hcmnist(params):
                           data_y=data_setting.y_t,
                           data_t=data_setting.t_t,
                           data_x_source=data_setting.x_s,
-                          seed=seed,
+                          seed=params['data_seed'],
                           source_size=1,  # Use all x_t available
                           use_validation=params['use_validation'],
                           use_source=params['use_source'],
                           binfeat=[],
                           contfeat=list(range(data_setting.x_t.shape[1])),
                           seed_add_on=params['seed_add_on'],
-                          use_data_x_source=params['use_data_x_source']
+                          use_data_x_source=params['use_data_x_source'],
                           )
     tau = data_setting.tau.mean()
     return data, tau
