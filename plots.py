@@ -28,6 +28,11 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
                  'aipw': 'AIPW'}
 
     table['model_name'] = [new_names[item] for item in table['model_name']]
+
+    if 'mae_naive' not in table.columns:
+        table['mae_naive'] = [np.abs(table['tau'][i] - table['ate_naive_all'][i]) for i in range(table.shape[0])]
+
+
     if is_Image:
         table['range_size'] = [str(round(item)) for item in table['range_size']]
 
@@ -48,7 +53,7 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
         table.range_size = table.range_size.astype('category')
         #table.range_size.cat.set_categories(['250(0.25)', '500(0.5)', '750(0.75)', '1000(1.0)'], inplace=True)
         table.range_size.cat.set_categories(['0.25', '0.5', '0.75', '1.0'], inplace=True)
-        table_stats = table[['model_name', 'range_size', 'mae_naive', 'mae_aipw']]
+        table_stats = table[['model_name', 'range_size', 'mae_naive']]
         print(table_stats.groupby(['model_name', 'range_size']).mean())
         return table
     else:
@@ -70,7 +75,7 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
         }
         #table['source_size_p'] = [item + ratios[item] for item in table['source_size_p']]
         table['source_size_p'] = [ratios[item] for item in table['source_size_p']]
-        table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
+        table_stats = table[['model_name', 'source_size_p', 'mae_naive']]
         print(table_stats.groupby(['model_name', 'source_size_p']).mean())
         return table
 
@@ -82,15 +87,12 @@ def read_table(filename,
     table = pd.read_csv(path, index_col=[0])
     if quick_stats:
         try:
-            table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
+            table_stats = table[['model_name', 'source_size_p', 'mae_naive']]
             print(table_stats.groupby(['model_name', 'source_size_p']).mean())
         except:
             table['mae_naive'] = table['tau'] - table['ate_naive_all']
-            table['mae_aipw'] = table['tau'] - table['ate_aipw_all']
             table['mae_naive'] = np.abs(table['mae_naive'].values)
-            table['mae_aipw'] = np.abs(table['mae_aipw'].values)
-            # table = table[table['mae_naive']<2]
-            table_stats = table[['model_name', 'source_size_p', 'mae_naive', 'mae_aipw']]
+            table_stats = table[['model_name', 'source_size_p', 'mae_naive']]
             print(table_stats.groupby(['model_name', 'source_size_p']).mean())
     return table
 

@@ -2,10 +2,10 @@ parameters:
     data_name: 'hcmnist'
     model_name: 'batle'
     config_name: 'hcmnist_batle'
-    ate_method_list: [ 'naive','aipw' ]
+    ate_method_list: ['naive']
     n_covariates: 0
-    repetitions: 25
-    seed: 4
+    repetitions: 5
+    seed: 20
     max_epochs: 100
     batch_size: 640
     units1: 200

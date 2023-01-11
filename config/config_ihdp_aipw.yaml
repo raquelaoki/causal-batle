@@ -2,9 +2,9 @@ parameters:
     data_name: 'ihdp'
     model_name: 'aipw'
     config_name: 'ihdp_aipw'
-    ate_method_list: ['naive','aipw']
-    repetitions: 30
-    seed: 9
+    ate_method_list: ['naive']
+    repetitions: 5
+    seed: 20
     max_epochs: 100
     batch_size: 50
     lr: 0.1

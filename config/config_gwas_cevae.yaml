@@ -2,11 +2,11 @@ parameters:
     data_name: 'gwas'
     model_name: 'cevae'
     config_name: 'gwas_cevae'
-    ate_method_list: [ 'naive','aipw' ]
+    ate_method_list: ['naive']
     n_covariates: 10000
     n_sample: 2000
-    repetitions: 25
-    seed: 4
+    repetitions: 5
+    seed: 20
     max_epochs: 100
     batch_size: 100
     lr: 0.001

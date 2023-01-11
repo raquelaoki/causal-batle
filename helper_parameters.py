@@ -141,7 +141,8 @@ def _check_params_consistency(params):
         params['units1'] = params.get('units1', 200)
         params['units2'] = params.get('units2', 100)
         params['units3'] = params.get('units3', 1)
-        params['alpha'] = params.get('alpha', [1, 1, 1, 1, 1])
+        params['alpha'] = params.get('alpha', [1, 1, 1, 1, 1, 1])
+        params['use_fix_digit'] = params.get("use_fix_digit", True)
         params['use_dropout'] = True
         params['use_source'] = True
         params['type_original'] = False
