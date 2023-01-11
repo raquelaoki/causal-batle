@@ -4,7 +4,7 @@ parameters:
     config_name: 'ihdp_cevae'
     ate_method_list: ['naive']
     repetitions: 5
-    seed: 20
+    seed: 9
     max_epochs: 100
     batch_size: 50
     lr: 0.001
