@@ -463,10 +463,12 @@ def criterion_function_y(batch, predictions, device='cpu'):
 
 
 def criterion_function_dragonnet_targeted(batch, predictions, device='cpu'):
-    mask = np.equal(batch[3], 1).to(torch.bool).to(device)
+    mask = np.equal(batch[3], 1).to(torch.bool)#.to(device)
 
     y_obs = batch[1][mask].to(device)
     t_obs = batch[2][mask].to(device)
+
+    mask = mask.to(device)
 
     t_predictions = predictions['t'].sample([1, 1]).reshape(-1, 1)[mask]  # .cpu().detach().numpy()
     y0_predictions = predictions['y0'].sample([1, 1]).reshape(-1, 1)[mask]  # .cpu().detach().numpy()

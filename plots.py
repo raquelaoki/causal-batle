@@ -227,3 +227,40 @@ def plot_around_treat_colors(table, seed, metric_name, labely_name, hue,
         plt.savefig(data_name + '_colors_' + title + str(seed) + '.png', dpi=600, bbox_inches='tight')
     return ax
 
+
+def plot_around_zero_colors(table, metric_name, labely_name, hue,
+                             ax=None, save_plot=False, fontsize=15, font_scale=1.3,
+                             figsize=(8, 5), title='swarm', data_name='',
+                            use_log=False):
+    sns.set(rc={'figure.figsize': figsize})
+    sns.set(font_scale=font_scale)
+    taus = pd.unique(table['tau'])
+    #table = table[table['tau'] == taus[seed]]
+    table['ae'] = table['tau']-table[metric_name]
+    sns.set(font_scale=font_scale)
+    cmap = sns.color_palette("Blues", n_colors=6)[2:]
+    ax = sns.swarmplot(x='model_name', y='ae',
+                       data=table, size=8,
+                       hue=hue, dodge=False,
+                       palette=cmap, ax=ax,
+                       )
+    #ax.set_yscale("log")
+    ax.set_xticklabels(ax.get_xticklabels())  # rotation=90
+    ax.axhline(y=0, color='black', linestyle='-', linewidth=3)
+    tau = 0
+
+    table = table[table['model_name'] != 'C-Batle']
+    cmap = sns.color_palette("YlOrBr", n_colors=8)[2:6]
+    ax = sns.swarmplot(x='model_name', y='ae',
+                       data=table, size=8,
+                       hue=hue, dodge=False,
+                       palette=cmap
+                       )
+    #ax.set_yscale("log")
+    ax.get_legend().remove()
+    ax.set_ylabel(labely_name + '(τ=' + str(tau) + ')', fontsize=fontsize)
+    ax.set_xlabel('Error Distribution', fontsize=fontsize)
+
+    if save_plot:
+        plt.savefig(data_name + '_colors_' + title + '.png', dpi=600, bbox_inches='tight')
+    return ax
