@@ -231,7 +231,7 @@ def make_DataClass(data_x, data_t, data_y,
             #  All the data in source is used (HCMNIST)
             data = DataTarget(x=data_x, t=data_t, y=data_y, use_validation=use_validation, test_size=test_size,
                               binfeat=binfeat, contfeat=contfeat,
-                              full_size_n=data_x.shape[0], target_size_n=target_x.shape[0], source_size_n=-1,
+                              full_size_n=data_x.shape[0], target_size_n=data_x.shape[0], source_size_n=-1,
                               )
     return data
 
