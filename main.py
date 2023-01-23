@@ -27,7 +27,8 @@ def main(paths_args):
         params = hp.parameter_loader(config_path=config)
         output_path = paths_args['drive'] + 'table_' + params['config_name']
         print('Config Name', params['config_name'])
-        table = repeat_experiment(params, table,
+        table = repeat_experiment(params,
+                                  table,
                                   use_range_source_p=paths_args['use_range_source_p'],
                                   save=paths_args['save'],
                                   output_save=output_path)

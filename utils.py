@@ -150,8 +150,13 @@ def read_config_names(path):
     return config_files
 
 
-def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, source_size_p=None,
-                      save=False, output_save='', target_size=None):
+def repeat_experiment(params,
+                      table=pd.DataFrame(),
+                      use_range_source_p=False,
+                      source_size_p=None,
+                      save=False,
+                      output_save='',
+                      target_size=None):
     """ Repeat the experiment b times.
     This function perform b repetitions of (Dataset, Model, Ate) - set by the config/params file.
     :param output_save:
@@ -186,7 +191,6 @@ def repeat_experiment(params, table=pd.DataFrame(), use_range_source_p=False, so
                                                                 data_counter=data_counter
                                                                 )
             else:
-
                 params['config_name_seeds'] = config_name + '_' + 'seed' + str(
                     params['seed']) + '_' + 'b' + str(i)
                 print(params['config_name_seeds'])
