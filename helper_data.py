@@ -183,13 +183,11 @@ def make_DataClass(data_x, data_t, data_y,
                                                         test_size=source_size)
 
         if not informative_source:
-            print("original size", s_x)
-            full = s_x.reshape(-1,1)
+            original_shapes = s_x.shape
+            full = s_x.reshape(-1, 1)
             permutation = np.random.permutation(len(full))
             s_x = full[permutation]
-            s_x = s_x.reshape(-1, t_x.shape[1])
-            print("new size (after permutation)", s_x)
-
+            s_x = s_x.reshape(original_shapes)
 
         n_source = s_x.shape[0]
         n_target = t_x.shape[0]
@@ -208,7 +206,7 @@ def make_DataClass(data_x, data_t, data_y,
 
         data = DataTargetAndSource(x=x, t=t, y=y, d=d, use_validation=use_validation,
                                    test_size=test_size, binfeat=binfeat, contfeat=contfeat,
-                                   full_size_n=data_x.shape[0], target_size_n=n_target, source_size_n=n_source,
+                                   full_size_n=x.shape[0], target_size_n=n_target, source_size_n=n_source,
                                    )
     else:
         logger.debug('... using only target domain data.')
@@ -321,6 +319,7 @@ def make_hcmnist(params):
                            use_source=params['use_source'],
                            source_size=params['source_size'],
                            )
+    #print('inside 278,', params['informative_source'])
     data = make_DataClass(data_x=data_setting.x_t,
                           data_y=data_setting.y_t,
                           data_t=data_setting.t_t,
@@ -333,6 +332,7 @@ def make_hcmnist(params):
                           contfeat=list(range(data_setting.x_t.shape[1])),
                           seed_add_on=params['seed_add_on'],
                           use_data_x_source=params['use_data_x_source'],
+                          informative_source=params['informative_source'],
                           )
     tau = data_setting.tau.mean()
     return data, tau
