@@ -222,7 +222,7 @@ def range_source_p(params, table, source_size_p=None, b=1, good_runs=0, target_s
     """
     if params['data_name'] == 'hcmnist':
         if not target_size:
-            range_sizes = [250, 500, 750, 1000]
+            range_sizes = [400, 800, 2400, 4800] #[250, 500, 750, 1000]
         else:
             range_sizes = target_size
     else:
