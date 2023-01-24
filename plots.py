@@ -32,8 +32,8 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
 
     table['model_name'] = [new_names[item] for item in table['model_name']]
 
-
     if is_Image:
+        vals = table['range_size'].unique()
         table['range_size'] = [str(round(item)) for item in table['range_size']]
 
         # ratios = {
@@ -42,17 +42,18 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
         #     '750': '(' + str(round(750 / 1000, 2)) + ')',
         #     '1000': '(' + str(round(1000 / 1000, 2)) + ')',
         # }
-        ratios = {
-            '250': str(round(250 / 1000, 2)),
-            '500': str(round(500 / 1000, 2)),
-            '750': str(round(750 / 1000, 2)),
-            '1000': str(round(1000 / 1000, 2)),
-        }
+
+        ratios = {}
+        for val in vals:
+            ratios[str(val)] = str(round(val / 1000, 2))
+        # ratios = {
+        #     '400': str(round(400 / 1600, 2)),
+        #     '800': str(round(800 / 1600, 2)),
+        #     '2400': str(round(2400 / 1600, 2)),
+        #     '4800': str(round(4800 / 1600, 2)),
+        # }
         table['range_size'] = [ratios[item] for item in table['range_size']]
-        #table['range_size'] = [item + ratios[item] for item in table['range_size']]
         table.range_size = table.range_size.astype('category')
-        #table.range_size.cat.set_categories(['250(0.25)', '500(0.5)', '750(0.75)', '1000(1.0)'], inplace=True)
-        table.range_size.cat.set_categories(['0.25', '0.5', '0.75', '1.0'], inplace=True)
         table_stats = table[['model_name', 'range_size', 'mae_naive']]
         print(table_stats.groupby(['model_name', 'range_size']).mean())
         return table

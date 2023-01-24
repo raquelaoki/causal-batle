@@ -204,6 +204,12 @@ def repeat_experiment(params,
         if save:
             table.to_csv(output_save + '.csv', sep=',')
 
+        table['mae_naive'] = table['tau'] - table['ate_naive_all']
+        table['mae_naive'] = np.abs(table['mae_naive'].values)
+        cols = ['mae_naive', 'alpha', 'lr', 'wd', 'dropout', 'batch', 'epochs', 'data_rep', 'repetitions']
+        print(table.groupby(['config', 'range_size'], as_index=False)[cols].mean())
+
+
     table['data_rep'] = n_seeds
     return table
 
@@ -222,7 +228,7 @@ def range_source_p(params, table, source_size_p=None, b=1, good_runs=0, target_s
     """
     if params['data_name'] == 'hcmnist':
         if not target_size:
-            range_sizes = [400, 800, 2400, 4800] #[250, 500, 750, 1000]
+            range_sizes = [200, 400, 600, 800]
         else:
             range_sizes = target_size
     else:
