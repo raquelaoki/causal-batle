@@ -312,14 +312,12 @@ def make_ihdp(params):
 
 
 def make_hcmnist(params):
-    #seed = params['seed']
     data_setting = HCMNIST('', download=True, seed=params['data_seed'],
                            use_fix_digit=params['use_fix_digit'],
                            target_size=params['target_size'],
                            use_source=params['use_source'],
                            source_size=params['source_size'],
                            )
-    #print('inside 278,', params['informative_source'])
     data = make_DataClass(data_x=data_setting.x_t,
                           data_y=data_setting.y_t,
                           data_t=data_setting.t_t,
@@ -374,6 +372,7 @@ class HCMNIST(datasets.MNIST):
         target_samples = list(range(self.x_t.shape[0]))
         np.random.shuffle(target_samples)
         target_samples_selection = target_samples[0:target_size]
+        source_samples_selection = target_samples[target_size:-1]
         self.x_t = self.x_t[target_samples_selection]
         self.target_t = self.target_t[target_samples_selection]
         self.t_t = self.t_t[target_samples_selection]
@@ -382,11 +381,13 @@ class HCMNIST(datasets.MNIST):
         # Setting source-domain:
         if use_source:
             if use_fix_digit:
-                mask_source = np.in1d(self.targets.numpy(), digits[-1])  #  Last Digit as source-domain.
+                mask_source = np.in1d(self.targets.numpy(), digits[-1])  # Last Digit as source-domain.
                 self.x_s = self.data[mask_source]
             else:
-                mask_source = np.in1d(self.targets.numpy(), digits[2:])  #  Any other digit can be used.
-                self.x_s = self.data[mask_source]
+                # In-domain source domain
+                self.x_s = self.data[mask_target]
+                # Remove samples used by target domain
+                self.x_s = self.x_s[source_samples_selection]
 
             # Fixing sample size as source_size
             source_samples = list(range(self.x_s.shape[0]))
@@ -395,7 +396,6 @@ class HCMNIST(datasets.MNIST):
             self.x_s = self.x_s[source_samples_selection]
         else:
             self.x_s = None
-
 
     def _fit_phi_model(self, domain=2):
         # Reference: quince/library/datasets/utils.py
