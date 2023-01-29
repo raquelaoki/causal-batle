@@ -6,6 +6,7 @@ References:
 
 import logging
 import numpy as np
+import pandas as pd
 import torch
 
 from scipy.special import expit
@@ -184,10 +185,19 @@ def make_DataClass(data_x, data_t, data_y,
 
         if not informative_source:
             original_shapes = s_x.shape
+            pandas = False
+            if type(s_x) == pd.DataFrame:
+                pandas = True
+                col = s_x.columns
+                s_x = s_x.values
+
             full = s_x.reshape(-1, 1)
             permutation = np.random.permutation(len(full))
             s_x = full[permutation]
             s_x = s_x.reshape(original_shapes)
+            if pandas:
+                s_x = pd.DataFrame(s_x)
+                s_x.columns = col
 
         n_source = s_x.shape[0]
         n_target = t_x.shape[0]

@@ -14,44 +14,35 @@ sns.set_style("whitegrid")
 
 
 def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
-                         is_Image=False):
+                         is_Image=False, remove_key_word=''):
     files = os.listdir(path)
     files = [os.path.join(path, f) for f in files]
     table = []
     for f in files:
-        _table = pd.read_csv(f, index_col=[0])
-        if 'mae_naive' not in _table.columns:
-            _table['mae_naive'] = [np.abs(_table['tau'][i] - _table['ate_naive_all'][i]) for i in range(_table.shape[0])]
-        table.append(_table)
+        if remove_key_word not in f:
+            _table = pd.read_csv(f, index_col=[0])
+            if 'mae_naive' not in _table.columns:
+                _table['mae_naive'] = [np.abs(_table['tau'][i] - _table['ate_naive_all'][i]) for i in range(_table.shape[0])]
+            if 'random' in f:
+                _table['model_name'] = 'batle-r'
+            table.append(_table)
     table = pd.concat(table, axis=0)
     new_names = {'batle': 'C-Batle',
+                 'batle-r': 'C-Batle-R',
                  'dragonnet': 'Drag.',
                  'bdragonnet': 'B-Drag.',
                  'cevae': 'Cevae',
                  'aipw': 'AIPW'}
-
     table['model_name'] = [new_names[item] for item in table['model_name']]
 
     if is_Image:
         vals = table['range_size'].unique()
         table['range_size'] = [str(round(item)) for item in table['range_size']]
 
-        # ratios = {
-        #     '250': '(' + str(round(250 / 1000, 2)) + ')',
-        #     '500': '(' + str(round(500 / 1000, 2)) + ')',
-        #     '750': '(' + str(round(750 / 1000, 2)) + ')',
-        #     '1000': '(' + str(round(1000 / 1000, 2)) + ')',
-        # }
-
         ratios = {}
         for val in vals:
             ratios[str(val)] = str(round(val / 1000, 2))
-        # ratios = {
-        #     '400': str(round(400 / 1600, 2)),
-        #     '800': str(round(800 / 1600, 2)),
-        #     '2400': str(round(2400 / 1600, 2)),
-        #     '4800': str(round(4800 / 1600, 2)),
-        # }
+
         table['range_size'] = [ratios[item] for item in table['range_size']]
         table.range_size = table.range_size.astype('category')
         table_stats = table[['model_name', 'range_size', 'mae_naive']]
@@ -60,13 +51,7 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
     else:
         table['source_size_p'] = table['source_size_p'] * 100
         table['source_size_p'] = [str(round(item)) + '%' for item in table['source_size_p']]
-        # ratios = {
-        #     '20%': '(' + str(0.25) + ')',
-        #     '40%': '(' + str(0.67) + ')',
-        #     '60%': '(' + str(1.5) + ')',
-        #     '80%': '(' + str(4) + ')',
-        #     '100%': '-',
-        # }
+
         ratios = {
             '20%':  str(0.25),
             '40%':  str(0.67),
@@ -74,7 +59,6 @@ def read_table_with_join(path='/content/drive/MyDrive/Colab Notebooks/outputs/',
             '80%':  str(4),
             '100%': '-',
         }
-        #table['source_size_p'] = [item + ratios[item] for item in table['source_size_p']]
         table['source_size_p'] = [ratios[item] for item in table['source_size_p']]
         table_stats = table[['model_name', 'source_size_p', 'mae_naive']]
         print(table_stats.groupby(['model_name', 'source_size_p']).mean())
@@ -99,12 +83,12 @@ def read_table(filename,
 
 
 def set_colors(methods_order,
-               our_method='C-Batle',
+               #our_method='C-Batle',
                two_colors=['#FF8C00', '#1e90ff']):
     two_colors = [sns.color_palette("YlOrBr", n_colors=8)[4],
         sns.color_palette("Blues", n_colors=8)[4]]
     # two_colors: first posision are baselines, second are our proposed method
-    return [two_colors[1] if method == our_method else two_colors[0] for method in methods_order]
+    return [two_colors[1] if 'Batle' in method else two_colors[0] for method in methods_order]
 
 
 def single_barplot(table, metric_name, metric_name_ylabel, title,
