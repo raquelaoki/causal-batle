@@ -243,7 +243,7 @@ def plot_around_zero_colors(table, metric_name, labely_name, hue,
                        )
     #ax.set_yscale("log")
     ax.get_legend().remove()
-    ax.set_ylabel(labely_name + '(τ=' + str(tau) + ')', fontsize=fontsize)
+    ax.set_ylabel(labely_name, fontsize=fontsize)
     ax.set_xlabel('Error Distribution', fontsize=fontsize)
 
     if save_plot:
