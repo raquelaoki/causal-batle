@@ -183,7 +183,9 @@ def make_DataClass(data_x, data_t, data_y,
             s_x, t_x, _, t_y, _, t_t = train_test_split(data_x, data_y, data_t, random_state=seed + seed_add_on,
                                                         test_size=source_size)
 
+        print('informative_source', informative_source)
         if not informative_source:
+            print('Im here')
             original_shapes = s_x.shape
             pandas = False
             if type(s_x) == pd.DataFrame:
@@ -316,6 +318,7 @@ def make_ihdp(params):
                           binfeat=list(range(6, 25)),
                           contfeat=list(range(6)),
                           seed_add_on=params['seed_add_on'],
+                          informative_source=params['informative_source'],
                           )
 
     return data, tau
