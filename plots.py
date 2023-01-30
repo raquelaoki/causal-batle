@@ -119,7 +119,8 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
               save_plot=False, fontsize=15, font_scale=1.3,
               figsize=(11.7, 8.27), axis_max=0.3,
               _h=['o', '\\', '+', ''], log_scale=False,
-              methods_order=None, data_name='', ncol_legend=3):
+              methods_order=None, data_name='', ncol_legend=3,
+              add_legend=True):
     sns.set(rc={'figure.figsize': figsize})
     sns.set(font_scale=font_scale)
     methods_rep = pd.unique(table[group_name_x].values)
@@ -145,7 +146,11 @@ def set_plots(table, metric_name_y, metric_name_ylabel, title,
     for i, thisbar in enumerate(ax.patches):
         # Set a different hatch for each bar
         thisbar.set_hatch(hatches[i])
-    ax.legend(ncol=ncol_legend, loc='upper right', fontsize=fontsize)
+    if add_legend:
+        ax.legend(ncol=ncol_legend, loc='upper right', fontsize=fontsize)
+    else:
+        ax.get_legend().remove()
+
     ax.xaxis.get_label().set_fontsize(fontsize)
     if save_plot:
         plt.savefig(data_name + '_' + title + '.png', dpi=600, bbox_inches='tight')
