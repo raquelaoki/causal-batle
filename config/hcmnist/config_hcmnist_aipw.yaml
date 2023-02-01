@@ -5,9 +5,9 @@ parameters:
     ate_method_list: ['naive']
     n_covariates: 1
     repetitions: 5
-    seed: 20
+    seed: 13
     max_epochs: 100
-    batch_size: 128
+    batch_size: 32
     lr: 0.01
     weight_decay: 0.05
     use_validation: True

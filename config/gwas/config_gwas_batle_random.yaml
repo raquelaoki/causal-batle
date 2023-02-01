@@ -1,7 +1,7 @@
 parameters:
     data_name: 'gwas'
     model_name: 'batle'
-    config_name: 'gwas_batle_info'
+    config_name: 'gwas_batle_random'
     ate_method_list: ['naive']
     n_covariates: 10000
     n_sample: 2000
@@ -11,8 +11,8 @@ parameters:
     batch_size: 250
     units1: 200
     units2: 100
-    lr: 0.0001
-    weight_decay: 0.001
+    lr: 0.001
+    weight_decay: 0.05
     dropout_p: 0.25
     use_validation: True
     use_validation_best: True
@@ -20,4 +20,4 @@ parameters:
     use_tensorboard: True
     use_source: True
     forward_passes: 30
-    informative_source: True
+    informative_source: False
