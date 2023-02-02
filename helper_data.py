@@ -383,7 +383,6 @@ class HCMNIST(datasets.MNIST):
         target_samples = list(range(self.x_t.shape[0]))
         np.random.shuffle(target_samples)
         target_samples_selection = target_samples[0:target_size]
-        source_samples_selection = target_samples[target_size:-1]
         self.x_t = self.x_t[target_samples_selection]
         self.target_t = self.target_t[target_samples_selection]
         self.t_t = self.t_t[target_samples_selection]
@@ -398,13 +397,13 @@ class HCMNIST(datasets.MNIST):
                 # In-domain source domain
                 self.x_s = self.data[mask_target]
                 # Remove samples used by target domain
+                source_samples_selection = target_samples[target_size:-1] #target not used
                 self.x_s = self.x_s[source_samples_selection]
 
             # Fixing sample size as source_size
             source_samples = list(range(self.x_s.shape[0]))
             np.random.shuffle(source_samples)
-            source_samples_selection = source_samples[0:source_size]
-            self.x_s = self.x_s[source_samples_selection]
+            self.x_s = self.x_s[source_samples[0:source_size]]
         else:
             self.x_s = None
 
@@ -466,7 +465,6 @@ class HCMNIST(datasets.MNIST):
         eps = (sigma_y * rng.normal(size=self.t_t.shape)).astype("float32")
 
         #  Outcomes.
-        # print(phi.shape, u.shape)
         mu0 = (quince.f_mu(x=phi.ravel(), t=0.0, u=u, theta=theta).astype("float32").ravel())
         mu1 = (quince.f_mu(x=phi.ravel(), t=1.0, u=u, theta=theta).astype("float32").ravel())
         y0 = mu0 + eps

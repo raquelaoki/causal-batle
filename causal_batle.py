@@ -258,19 +258,18 @@ def fit_causal_batle(epochs,
                                                                                 criterion_function=criterion,
                                                                                 predictions=predictions,
                                                                                 device=device)
-            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + alpha[2] * lb_tg + alpha[3] * lb_d + alpha[4] * lb_r
+            loss_batch = alpha[0] * lb_t + alpha[1] * lb_y + 0 * lb_tg + 0.5 * lb_d + alpha[4] * lb_r
             loss_batch.backward()
             optimizer.step()
 
             # Calculate adversarial loss.
             optimizer.zero_grad()
             predictions = model(batch[0].to(device))
-            #print('second pass')
             _, _, _, _, _, lb_a = _calculate_criterion_causalbatle(batch=batch,
                                                                    criterion_function=criterion,
                                                                    predictions=predictions,
                                                                    device=device)
-            loss_adv = alpha[5] * lb_a
+            loss_adv = 0.5 * lb_a
             loss_adv.backward()
             for name, layer in model.named_modules():
                 try:
